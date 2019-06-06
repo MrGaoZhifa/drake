@@ -56,6 +56,14 @@
     <axis xyz="1.0 0.0 0.0"/>
     <limit lower="-0.523599" upper="0.523599" effort="-1.0" velocity="1.0"/>
   </joint>
+  <transmission name="j_hip_x_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_hip_x">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_hip_x_actuator">
+    </actuator>
+  </transmission>
   <link name="hip_x_link">
     <inertial>
       <origin xyz="-0.013462 -0.001267 -7.7E-5" rpy="0.0 0.0 0.0"/>
@@ -76,6 +84,14 @@
     <axis xyz="0.0 1.0 0.0"/>
     <limit lower="-1.57" upper="0.174533" effort="-1.0" velocity="1.0"/>
   </joint>
+  <transmission name="j_hip_y_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_hip_y">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_hip_y_actuator">
+    </actuator>
+  </transmission>
   <link name="thigh">
     <inertial>
       <origin xyz="0.048668 0.002117 -0.216367" rpy="0.0 0.0 0.0"/>
@@ -96,6 +112,14 @@
     <axis xyz="0.0 1.0 0.0"/>
     <limit lower="0.0" upper="2.583" effort="-1.0" velocity="1.0"/>
   </joint>
+  <transmission name="j_knee_y_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_knee_y">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_knee_y_actuator">
+    </actuator>
+  </transmission>
   <link name="shin">
     <inertial>
       <origin xyz="0.019484 6.7E-5 -0.167324" rpy="0.0 0.0 0.0"/>
@@ -116,6 +140,14 @@
     <axis xyz="0.0 1.0 0.0"/>
     <limit lower="-1.57" upper="0.174533" effort="-1.0" velocity="1.0"/>
   </joint>
+  <transmission name="j_ankle_y_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_ankle_y">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_ankle_y_actuator">
+    </actuator>
+  </transmission>
   <link name="ankle_y_link">
     <inertial>
       <origin xyz="-0.017821 0.001497 -6.49E-4" rpy="0.0 0.0 0.0"/>
@@ -136,6 +168,14 @@
     <axis xyz="1.0 0.0 0.0"/>
     <limit lower="-0.523599" upper="0.523599" effort="-1.0" velocity="1.0"/>
   </joint>
+  <transmission name="j_ankle_x_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_ankle_x">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_ankle_x_actuator">
+    </actuator>
+  </transmission>
   <link name="base">
     <inertial>
       <origin xyz="0.021997 0.006327 -0.006204" rpy="0.0 0.0 0.0"/>
@@ -170,6 +210,14 @@
     <axis xyz="0.0 1.0 0.0"/>
     <limit lower="-1.0E16" upper="1.0E16" effort="-1.0" velocity="1.0"/>
   </joint>
+  <transmission name="j_l_wheel_y_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_l_wheel_y">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_l_wheel_y_actuator">
+    </actuator>
+  </transmission>
   <link name="l_wheel">
     <inertial>
       <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
@@ -198,6 +246,14 @@
     <axis xyz="0.0 1.0 0.0"/>
     <limit lower="-1.0E16" upper="1.0E16" effort="-1.0" velocity="1.0"/>
   </joint>
+  <transmission name="j_r_wheel_y_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_r_wheel_y">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_r_wheel_y_actuator">
+    </actuator>
+  </transmission>
   <link name="r_wheel">
     <inertial>
       <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
@@ -252,6 +308,14 @@
     <axis xyz="0.0 1.0 0.0"/>
     <limit lower="-2.4240878" upper="0.981049573" effort="-1.0" velocity="1.0"/>
   </joint>
+  <transmission name="j_r_shoulder_y_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_r_shoulder_y">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_r_shoulder_y_actuator">
+    </actuator>
+  </transmission>
   <link name="r_scapula">
     <inertial>
       <origin xyz="6.1099E-4 0.06306661 0.03032448" rpy="0.0 0.0 0.0"/>
@@ -272,6 +336,14 @@
     <axis xyz="1.0 0.0 0.0"/>
     <limit lower="-2.0943951" upper="0.0872665" effort="-1.0" velocity="1.0"/>
   </joint>
+  <transmission name="j_r_shoulder_x_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_r_shoulder_x">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_r_shoulder_x_actuator">
+    </actuator>
+  </transmission>
   <link name="r_shoulder">
     <inertial>
       <origin xyz="0.0 -7.0614E-4 -0.01975465" rpy="0.0 0.0 0.0"/>
@@ -292,6 +364,14 @@
     <axis xyz="0.0 0.0 1.0"/>
     <limit lower="0.0872665" upper="2.0943951" effort="-1.0" velocity="1.0"/>
   </joint>
+  <transmission name="j_r_shoulder_z_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_r_shoulder_z">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_r_shoulder_z_actuator">
+    </actuator>
+  </transmission>
   <link name="r_upper_arm">
     <inertial>
       <origin xyz="-0.0062579 3.507E-5 -0.17187666" rpy="0.0 0.0 0.0"/>
@@ -312,6 +392,14 @@
     <axis xyz="0.0 1 0.0"/>
     <limit lower="-2.18166" upper="0.0" effort="-1.0" velocity="1.0"/>
   </joint>
+  <transmission name="j_r_elbow_y_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_r_elbow_y">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_r_elbow_y_actuator">
+    </actuator>
+  </transmission>
   <link name="r_elbow">
     <inertial>
       <origin xyz="5.494E-5 0.0 -0.00888504" rpy="0.0 0.0 0.0"/>
@@ -338,6 +426,14 @@
     <axis xyz="0.0 0.0 1"/>
     <limit lower="-0.7854" upper="1.5708" effort="-1.0" velocity="1.0"/>
   </joint>
+  <transmission name="j_r_elbow_z_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_r_elbow_z">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_r_elbow_z_actuator">
+    </actuator>
+  </transmission>
   <link name="r_lower_arm">
     <inertial>
       <origin xyz="-4.326E-5 3.091E-5 -0.13751046" rpy="0.0 0.0 0.0"/>
@@ -358,6 +454,14 @@
     <axis xyz="0.0 1 0.0"/>
     <limit lower="-0.785398" upper="0.785398" effort="-1.0" velocity="1.0"/>
   </joint>
+  <transmission name="j_r_wrist_y_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_r_wrist_y">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_r_wrist_y_actuator">
+    </actuator>
+  </transmission>
   <link name="r_wrist">
     <inertial>
       <origin xyz="0.00240142 7.9666E-4 -0.00125392" rpy="0.0 0.0 0.0"/>
@@ -378,6 +482,14 @@
     <axis xyz="1 0.0 0.0"/>
     <limit lower="-0.523599" upper="1.5708" effort="-1.0" velocity="1.0"/>
   </joint>
+  <transmission name="j_r_wrist_x_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_r_wrist_x">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_r_wrist_x_actuator">
+    </actuator>
+  </transmission>
   <link name="r_palm">
     <inertial>
       <origin xyz="0.00618476 -0.00346679 -0.01888817" rpy="0.0 0.0 0.0"/>
@@ -406,6 +518,14 @@
     <axis xyz="0.0 1.0 0.0"/>
     <limit lower="-2.4240878" upper="0.981049573" effort="-1.0" velocity="1.0"/>
   </joint>
+  <transmission name="j_l_shoulder_y_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_l_shoulder_y">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_l_shoulder_y_actuator">
+    </actuator>
+  </transmission>
   <link name="l_scapula">
     <inertial>
       <origin xyz="-6.1099E-4 -0.06306661 0.03032448" rpy="0.0 0.0 0.0"/>
@@ -426,6 +546,14 @@
     <axis xyz="1.0 0.0 0.0"/>
     <limit lower="-0.0872665" upper="2.0943951" effort="-1.0" velocity="1.0"/>
   </joint>
+  <transmission name="j_l_shoulder_x_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_l_shoulder_x">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_l_shoulder_x_actuator">
+    </actuator>
+  </transmission>
   <link name="l_shoulder">
     <inertial>
       <origin xyz="0.0 7.0624E-4 -0.01975437" rpy="0.0 0.0 0.0"/>
@@ -446,6 +574,14 @@
     <axis xyz="0.0 0.0 1.0"/>
     <limit lower="-2.0943951" upper="-0.0872665" effort="-1.0" velocity="1.0"/>
   </joint>
+  <transmission name="j_l_shoulder_z_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_l_shoulder_z">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_l_shoulder_z_actuator">
+    </actuator>
+  </transmission>
   <link name="l_upper_arm">
     <inertial>
       <origin xyz="-0.0062579 3.507E-5 -0.17187666" rpy="0.0 0.0 0.0"/>
@@ -466,6 +602,14 @@
     <axis xyz="0.0 1.0 0.0"/>
     <limit lower="-2.18166" upper="0.0" effort="-1.0" velocity="1.0"/>
   </joint>
+  <transmission name="j_l_elbow_y_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_l_elbow_y">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_l_elbow_y_actuator">
+    </actuator>
+  </transmission>
   <link name="l_elbow">
     <inertial>
       <origin xyz="5.494E-5 0.0 -0.00888504" rpy="0.0 0.0 0.0"/>
@@ -492,6 +636,14 @@
     <axis xyz="0.0 0.0 1.0"/>
     <limit lower="-1.5708" upper="0.7854" effort="-1.0" velocity="1.0"/>
   </joint>
+  <transmission name="j_l_elbow_z_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_l_elbow_z">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_l_elbow_z_actuator">
+    </actuator>
+  </transmission>
   <link name="l_lower_arm">
     <inertial>
       <origin xyz="-4.326E-5 3.091E-5 -0.13751046" rpy="0.0 0.0 0.0"/>
@@ -512,6 +664,14 @@
     <axis xyz="0.0 1.0 0.0"/>
     <limit lower="-0.785398" upper="0.785398" effort="-1.0" velocity="1.0"/>
   </joint>
+  <transmission name="j_l_wrist_y_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_l_wrist_y">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_l_wrist_y_actuator">
+    </actuator>
+  </transmission>
   <link name="l_wrist">
     <inertial>
       <origin xyz="0.00240142 7.9666E-4 -0.00125392" rpy="0.0 0.0 0.0"/>
@@ -532,6 +692,14 @@
     <axis xyz="1.0 0.0 0.0"/>
     <limit lower="-1.5708" upper="0.523599" effort="-1.0" velocity="1.0"/>
   </joint>
+  <transmission name="j_l_wrist_x_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_l_wrist_x">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_l_wrist_x_actuator">
+    </actuator>
+  </transmission>
   <link name="l_palm">
     <inertial>
       <origin xyz="0.00618476 -0.00346679 -0.01888817" rpy="0.0 0.0 0.0"/>
@@ -559,6 +727,14 @@
     <axis xyz="0.0 1 0.0"/>
     <limit lower="-0.0872664626" upper="0.698132" effort="-1.0" velocity="1.0"/>
   </joint>
+  <transmission name="j_neck_y_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_neck_y">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_neck_y_actuator">
+    </actuator>
+  </transmission>
   <link name="head">
     <inertial>
       <origin xyz="0.01272383 -0.00326913 0.07053205" rpy="0.0 0.0 0.0"/>
