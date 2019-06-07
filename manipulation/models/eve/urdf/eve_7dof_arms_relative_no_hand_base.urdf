@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<robot xmlns:ns2="http://www.ros.org" xmlns:xi="http://www.w3.org/2003/XInclude" name="Eve">
+<robot xmlns:ns2="http://www.ros.org" xmlns:xi="http://www.w3.org/2003/XInclude" name="Eve_base">
 
   <link name="pelvis">
     <inertial>
@@ -10,7 +10,7 @@
     <visual>
       <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>
       <geometry>
-        <mesh filename="../meshes/7dof_torso.obj" scale="1 1 1"/>
+        <mesh filename="package://eve/meshes/7dof_torso.obj" scale="1 1 1"/>
       </geometry>
     </visual>
     <collision>
@@ -22,9 +22,9 @@
   </link>
   <joint name="j_hip_z" type="revolute">
     <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
-    <parent link="pelvis"/>
-    <child link="abdomen"/>
-    <axis xyz="0.0 0.0 1.0"/>
+    <parent link="abdomen"/>
+    <child link="pelvis"/>
+    <axis xyz="0.0 0.0 -1.0"/>
     <limit lower="-1.0472" upper="1.0472" effort="-1.0" velocity="1.0"/>
   </joint>
   <transmission name="j_hip_z_trans">
@@ -45,15 +45,15 @@
     <visual>
       <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>
       <geometry>
-        <mesh filename="../meshes/abdomen.obj" scale="1 1 1"/>
+        <mesh filename="package://eve/meshes/abdomen.obj" scale="1 1 1"/>
       </geometry>
     </visual>
   </link>
   <joint name="j_hip_x" type="revolute">
     <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
-    <parent link="abdomen"/>
-    <child link="hip_x_link"/>
-    <axis xyz="1.0 0.0 0.0"/>
+    <parent link="hip_x_link"/>
+    <child link="abdomen"/>
+    <axis xyz="-1.0 0.0 0.0"/>
     <limit lower="-0.523599" upper="0.523599" effort="-1.0" velocity="1.0"/>
   </joint>
   <transmission name="j_hip_x_trans">
@@ -73,15 +73,15 @@
     <visual>
       <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>
       <geometry>
-        <mesh filename="../meshes/hip.obj" scale="1 1 1"/>
+        <mesh filename="package://eve/meshes/hip.obj" scale="1 1 1"/>
       </geometry>
     </visual>
   </link>
   <joint name="j_hip_y" type="revolute">
-    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
-    <parent link="hip_x_link"/>
-    <child link="thigh"/>
-    <axis xyz="0.0 1.0 0.0"/>
+    <origin xyz="0.0 0.0 0.4" rpy="0.0 0.0 0.0"/>
+    <parent link="thigh"/>
+    <child link="hip_x_link"/>
+    <axis xyz="0.0 -1.0 0.0"/>
     <limit lower="-1.57" upper="0.174533" effort="-1.0" velocity="1.0"/>
   </joint>
   <transmission name="j_hip_y_trans">
@@ -94,22 +94,24 @@
   </transmission>
   <link name="thigh">
     <inertial>
-      <origin xyz="0.048668 0.002117 -0.216367" rpy="0.0 0.0 0.0"/>
+      <!-- <origin xyz="0.048668 0.002117 -0.216367" rpy="0.0 0.0 0.0"/> -->
+      <origin xyz="0.048668 0.002117 0.183633" rpy="0.0 0.0 0.0"/>
       <mass value="12.846698"/>
       <inertia ixx="0.172201" ixy="-0.001348" ixz="0.012646" iyy="0.155119" iyz="-6.0E-4" izz="0.076153"/>
     </inertial>
     <visual>
-      <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>
+      <origin xyz="0.0 0.0 0.4" rpy="1.5707963 0.0 1.5707963"/>
       <geometry>
-        <mesh filename="../meshes/thigh.obj" scale="1 1 1"/>
+        <mesh filename="package://eve/meshes/thigh.obj" scale="1 1 1"/>
       </geometry>
     </visual>
   </link>
   <joint name="j_knee_y" type="revolute">
-    <origin xyz="0.0 0.0 -0.4" rpy="0.0 0.0 0.0"/>
-    <parent link="thigh"/>
-    <child link="shin"/>
-    <axis xyz="0.0 1.0 0.0"/>
+    <!-- <origin xyz="0.0 0.0 -0.4" rpy="0.0 0.0 0.0"/> -->
+    <origin xyz="0.0 0.0 0.38" rpy="0.0 0.0 0.0"/>
+    <parent link="shin"/>
+    <child link="thigh"/>
+    <axis xyz="0.0 -1.0 0.0"/>
     <limit lower="0.0" upper="2.583" effort="-1.0" velocity="1.0"/>
   </joint>
   <transmission name="j_knee_y_trans">
@@ -122,22 +124,24 @@
   </transmission>
   <link name="shin">
     <inertial>
-      <origin xyz="0.019484 6.7E-5 -0.167324" rpy="0.0 0.0 0.0"/>
+      <!-- <origin xyz="0.019484 6.7E-5 -0.167324" rpy="0.0 0.0 0.0"/> -->
+      <origin xyz="0.019484 6.7E-5 0.212676" rpy="0.0 0.0 0.0"/>
       <mass value="10.894892"/>
       <inertia ixx="0.191988" ixy="-2.08E-4" ixz="0.005202" iyy="0.176793" iyz="-3.45E-4" izz="0.049718"/>
     </inertial>
     <visual>
-      <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>
+      <origin xyz="0.0 0.0 0.38" rpy="1.5707963 0.0 1.5707963"/>
       <geometry>
-        <mesh filename="../meshes/shin.obj" scale="1 1 1"/>
+        <mesh filename="package://eve/meshes/shin.obj" scale="1 1 1"/>
       </geometry>
     </visual>
   </link>
   <joint name="j_ankle_y" type="revolute">
-    <origin xyz="0.0 0.0 -0.38" rpy="0.0 0.0 0.0"/>
-    <parent link="shin"/>
-    <child link="ankle_y_link"/>
-    <axis xyz="0.0 1.0 0.0"/>
+    <!-- <origin xyz="0.0 0.0 -0.38" rpy="0.0 0.0 0.0"/> -->
+    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+    <parent link="ankle_y_link"/>
+    <child link="shin"/>
+    <axis xyz="0.0 -1.0 0.0"/>
     <limit lower="-1.57" upper="0.174533" effort="-1.0" velocity="1.0"/>
   </joint>
   <transmission name="j_ankle_y_trans">
@@ -157,15 +161,15 @@
     <visual>
       <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>
       <geometry>
-        <mesh filename="../meshes/ankle.obj" scale="1 1 1"/>
+        <mesh filename="package://eve/meshes/ankle.obj" scale="1 1 1"/>
       </geometry>
     </visual>
   </link>
   <joint name="j_ankle_x" type="revolute">
     <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
-    <parent link="ankle_y_link"/>
-    <child link="base"/>
-    <axis xyz="1.0 0.0 0.0"/>
+    <parent link="base"/>
+    <child link="ankle_y_link"/>
+    <axis xyz="-1.0 0.0 0.0"/>
     <limit lower="-0.523599" upper="0.523599" effort="-1.0" velocity="1.0"/>
   </joint>
   <transmission name="j_ankle_x_trans">
@@ -185,7 +189,7 @@
     <visual>
       <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>
       <geometry>
-        <mesh filename="../meshes/base_wheels.obj" scale="1 1 1"/>
+        <mesh filename="package://eve/meshes/base_wheels.obj" scale="1 1 1"/>
         <!-- <box size=".5 .15 .5" /> -->
       </geometry>
     </visual>
@@ -198,11 +202,13 @@
     <collision>
       <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>
       <geometry>
-        <!-- <mesh filename="../meshes/base_wheels.obj" scale="1 1 1"/> -->
+        <!-- <mesh filename="package://eve/meshes/base_wheels.obj" scale="1 1 1"/> -->
         <box size=".4 .15 .6" />
       </geometry>
     </collision>
   </link>
+
+
   <joint name="j_l_wheel_y" type="continuous">
     <origin xyz="0.142 0.26983 0.019" rpy="0.0 0.0 0.0"/>
     <parent link="base"/>
@@ -227,14 +233,14 @@
     <visual>
       <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 -1.5707963"/>
       <geometry>
-        <mesh filename="../meshes/wheel.obj" scale="1 1 1"/>
+        <mesh filename="package://eve/meshes/wheel.obj" scale="1 1 1"/>
         <!-- <cylinder length="0.02" radius="0.14"/> -->
       </geometry>
     </visual>
     <collision>
       <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 0.0"/>
       <geometry>
-        <!-- <mesh filename="../meshes/wheel.obj" scale="1 1 1"/> -->
+        <!-- <mesh filename="package://eve/meshes/wheel.obj" scale="1 1 1"/> -->
         <cylinder length="0.02" radius="0.14"/>
       </geometry>
     </collision>
@@ -263,7 +269,7 @@
     <visual>
       <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>
       <geometry>
-        <mesh filename="../meshes/wheel.obj" scale="1 1 1"/>
+        <mesh filename="package://eve/meshes/wheel.obj" scale="1 1 1"/>
         <!-- <cylinder length="0.02" radius="0.14"/> -->
       </geometry>
     </visual>
@@ -271,7 +277,7 @@
       <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 0.0"/>
       <geometry>
         <cylinder length="0.02" radius="0.14"/>
-        <!-- <mesh filename="../meshes/wheel.obj" scale="1 1 1"/> -->
+        <!-- <mesh filename="package://eve/meshes/wheel.obj" scale="1 1 1"/> -->
       </geometry>
     </collision> 
   </link>

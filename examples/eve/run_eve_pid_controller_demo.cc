@@ -7,6 +7,7 @@
 
 #include <gflags/gflags.h>
 
+#include <drake/systems/controllers/pid_controlled_system.h>
 #include "drake/common/drake_assert.h"
 #include "drake/common/find_resource.h"
 #include "drake/common/text_logging_gflags.h"
@@ -93,15 +94,18 @@ void DoMain() {
       *builder.AddSystem<geometry::SceneGraph>();
   scene_graph.set_name("scene_graph");
 
+  // Create real model for simulation and control
   MultibodyPlant<double>& plant =
       *builder.AddSystem<MultibodyPlant>(FLAGS_max_time_step);
+  plant.set_name("plant");
+
   plant.RegisterAsSourceForSceneGraph(&scene_graph);
 
   multibody::Parser parser(&plant);
 
   const std::string full_name = FindResourceOrThrow(
       "drake/manipulation/models/eve/"
-      "urdf/eve_7dof_arms_relative_no_hand.urdf");
+      "urdf/eve_7dof_arms_relative.urdf");
 
   ModelInstanceIndex plant_model_instance_index =
       parser.AddModelFromFile(full_name);
@@ -165,7 +169,7 @@ void DoMain() {
 //      VectorX<double>::Ones(plant.num_actuators()) * FLAGS_constant_pos;
 
 
-  // Connect plant with scene_graph to get collision information
+  // Connect plant with scene_graph to get collision information.
   DRAKE_DEMAND(!!plant.get_source_id());
   builder.Connect(
       plant.get_geometry_poses_output_port(),
@@ -176,7 +180,7 @@ void DoMain() {
   geometry::ConnectDrakeVisualizer(&builder, scene_graph);
   std::unique_ptr<systems::Diagram<double>> diagram = builder.Build();
 
-  // Create a context for this system:
+  // Create a context for this diagram and plant.
   std::unique_ptr<systems::Context<double>> diagram_context =
       diagram->CreateDefaultContext();
   diagram->SetDefaultContext(diagram_context.get());
@@ -207,7 +211,7 @@ void DoMain() {
   simulator.AdvanceTo(FLAGS_simulation_time);
 }
 
-}  // namespace allegro_hand
+}  // namespace eve
 }  // namespace examples
 }  // namespace drake
 

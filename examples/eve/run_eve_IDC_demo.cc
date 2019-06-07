@@ -7,6 +7,9 @@
 
 #include <gflags/gflags.h>
 
+#include <drake/multibody/tree/revolute_spring.h>
+#include <drake/systems/controllers/inverse_dynamics_controller.h>
+#include <drake/systems/controllers/pid_controlled_system.h>
 #include "drake/common/drake_assert.h"
 #include "drake/common/find_resource.h"
 #include "drake/common/text_logging_gflags.h"
@@ -19,12 +22,12 @@
 #include "drake/multibody/tree/revolute_joint.h"
 #include "drake/multibody/tree/uniform_gravity_field_element.h"
 #include "drake/multibody/tree/weld_joint.h"
-#include <drake/multibody/tree/revolute_spring.h>
 #include "drake/systems/analysis/simulator.h"
+#include "drake/systems/controllers/inverse_dynamics_controller.h"
 #include "drake/systems/framework/diagram.h"
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/systems/primitives/constant_vector_source.h"
-//#include "drake/systems/controllers/inverse_dynamics_controller.h"
+#include "drake/systems/primitives/matrix_gain.h"
 
 namespace drake {
 namespace examples {
@@ -33,18 +36,18 @@ namespace eve {
 using drake::multibody::ModelInstanceIndex;
 using drake::multibody::MultibodyPlant;
 
-DEFINE_double(constant_load, 0,
+DEFINE_double(constant_pos, 0.0,
               "the constant load on each joint, Unit [Nm]."
               "Suggested load is in the order of 0.01 Nm. When input value"
               "equals to 0 (default), the program runs a passive simulation.");
 
-DEFINE_double(simulation_time, 10,
+DEFINE_double(simulation_time, 3,
               "Desired duration of the simulation in seconds");
 
 DEFINE_bool(use_right_hand, true,
             "Which hand to model: true for right hand or false for left hand");
 
-DEFINE_double(max_time_step, 1.0e-3,
+DEFINE_double(max_time_step, 1.0e-6,
               "Simulation time step used for integrator.");
 
 DEFINE_bool(add_gravity, false,
@@ -92,33 +95,21 @@ void DoMain() {
       *builder.AddSystem<geometry::SceneGraph>();
   scene_graph.set_name("scene_graph");
 
+  // Create real model for simulation and control
   MultibodyPlant<double>& plant =
       *builder.AddSystem<MultibodyPlant>(FLAGS_max_time_step);
+  plant.set_name("plant");
+
   plant.RegisterAsSourceForSceneGraph(&scene_graph);
 
   multibody::Parser parser(&plant);
-  // const std::string xml_filename =
-  // FindResourceOrThrow("drake/manipulation/models/"
-  //       "qb_hand_description/package.xml");
-  // parser.package_map().AddPackageXml(xml_filename);
 
   const std::string full_name = FindResourceOrThrow(
       "drake/manipulation/models/eve/"
-      "urdf/eve_7dof_arms_relative_no_hand_base.urdf");
+      "urdf/eve_7dof_arms_relative.urdf");
 
   ModelInstanceIndex plant_model_instance_index =
       parser.AddModelFromFile(full_name);
-
-  // Weld the hand to the world frame
-  // const auto& joint_hand_root = plant.GetBodyByName("base");
-  // plant.AddJoint<multibody::WeldJoint>("weld_base", plant.world_body(),
-  // nullopt,
-  //     joint_hand_root, nullopt, Isometry3<double>::Identity());
-
-  // if (!FLAGS_add_gravity) {
-  //   plant.mutable_gravity_field().set_gravity_vector(
-  //       Eigen::Vector3d::Zero());
-  // }
 
   // Add half space plane and gravity.
   const drake::multibody::CoulombFriction<double> coef_friction_inclined_plane(
@@ -127,46 +118,116 @@ void DoMain() {
   multibody::benchmarks::inclined_plane::AddInclinedPlaneAndGravityToPlant(
       FLAGS_gravity, 0.0, drake::nullopt, coef_friction_inclined_plane, &plant);
 
-  // Attach Spring at each joint.
-  plant.AddForceElement<multibody::RevoluteSpring>(
-      dynamic_cast<const drake::multibody::RevoluteJoint<double>&>(
-          plant.GetJointByName("j_ankle_x")),
-      0, 1500);
-  plant.AddForceElement<multibody::RevoluteSpring>(
-      dynamic_cast<const drake::multibody::RevoluteJoint<double>&>(
-          plant.GetJointByName("j_ankle_y")),
-      0, 1500);
-  plant.AddForceElement<multibody::RevoluteSpring>(
-      dynamic_cast<const drake::multibody::RevoluteJoint<double>&>(
-          plant.GetJointByName("j_knee_y")),
-      0, 1500);
-  plant.AddForceElement<multibody::RevoluteSpring>(
-      dynamic_cast<const drake::multibody::RevoluteJoint<double>&>(
-          plant.GetJointByName("j_hip_y")),
-      0, 1500);
-  plant.AddForceElement<multibody::RevoluteSpring>(
-      dynamic_cast<const drake::multibody::RevoluteJoint<double>&>(
-          plant.GetJointByName("j_hip_x")),
-      0, 1500);
-
   // Now the model is complete.
   plant.Finalize();
 
-//  drake::log()->info(std::to_string(plant.num_actuators()) + " - " +
-//                     std::to_string(plant.num_actuated_dofs()));
+  // Create fake model for InverseDynamicsController
+  MultibodyPlant<double> fake_plant(FLAGS_max_time_step);
+  fake_plant.set_name("fake_plant");
+  multibody::Parser fake_parser(&fake_plant);
 
-  // constant force input
-  VectorX<double> constant_load_value =
-      VectorX<double>::Ones(plant.num_actuators()) * FLAGS_constant_load;
+  const std::string fake_full_name = FindResourceOrThrow(
+      "drake/manipulation/models/eve/"
+      "urdf/eve_7dof_arms_relative_no_hand_base.urdf");
 
-  auto constant_source =
+  ModelInstanceIndex fake_plant_model_instance_index =
+      fake_parser.AddModelFromFile(fake_full_name);
+  (void)fake_plant_model_instance_index;
+
+  // Weld the hand to the world frame
+  const auto& joint_eve_root = fake_plant.GetBodyByName("base");
+  fake_plant.AddJoint<multibody::WeldJoint>(
+      "weld_base", fake_plant.world_body(), nullopt, joint_eve_root, nullopt,
+      Isometry3<double>::Identity());
+
+  // Now the model is complete.
+  fake_plant.Finalize();
+
+  // Test the port dimension and numbering.
+  drake::log()->info(
+      "num_joints: " + std::to_string(plant.num_joints()) +
+      ", num_positions: " + std::to_string(plant.num_positions()) +
+      ", num_velocities: " + std::to_string(plant.num_velocities()) +
+      ", num_actuators: " + std::to_string(plant.num_actuators()));
+  drake::log()->info(
+      "num_joints: " + std::to_string(fake_plant.num_joints()) +
+      ", num_positions: " + std::to_string(fake_plant.num_positions()) +
+      ", num_velocities: " + std::to_string(fake_plant.num_velocities()) +
+      ", num_actuators: " + std::to_string(fake_plant.num_actuators()));
+  for (multibody::JointActuatorIndex a(0); a < fake_plant.num_positions();
+       ++a) {
+    drake::log()->info(
+        "PLANT JOINT: " + plant.get_joint_actuator(a).joint().name() +
+        " has actuator " + plant.get_joint_actuator(a).name());
+    drake::log()->info(
+        "FAKE PLANT JOINT: " + fake_plant.get_joint_actuator(a).joint().name() +
+        " has actuator " + fake_plant.get_joint_actuator(a).name());
+  }
+  int index = 0;
+  for (multibody::JointIndex j(0); j < fake_plant.num_joints(); ++j) {
+    drake::log()->info(std::to_string(index++));
+    if (index <= plant.num_joints())
+      drake::log()->info(
+        "PLANT JOINT: " + plant.get_joint(j).name() + ", position@" +
+        std::to_string(plant.get_joint(j).position_start()) + ", velocity@" +
+        std::to_string(plant.get_joint(j).velocity_start()));
+    drake::log()->info(
+        "FAKE PLANT JOINT: " + fake_plant.get_joint(j).name() + ", position@" +
+        std::to_string(fake_plant.get_joint(j).position_start()) +
+        ", velocity@" +
+        std::to_string(fake_plant.get_joint(j).velocity_start()));
+  }
+
+  // Create PidControlledSystem
+  const int Q = plant.num_positions();
+  const int V = plant.num_velocities();
+  const int U = plant.num_actuators();
+  const Eigen::VectorXd Kp_ = Eigen::VectorXd::Ones(U) * 0;
+  const Eigen::VectorXd Ki_ = Eigen::VectorXd::Ones(U) * 0;
+  const Eigen::VectorXd Kd_ = Eigen::VectorXd::Ones(U) * 0;
+  Eigen::MatrixXd feedback_selector = Eigen::MatrixXd::Zero(2 * U, Q + V);
+  // Try to find mapping between joints of plant and fake_plant.
+  for (multibody::JointIndex j(0); j < plant.num_joints(); ++j) {
+    feedback_selector(fake_plant.get_joint(j).position_start(),
+                      plant.get_joint(j).position_start()) = 1;
+    feedback_selector(fake_plant.get_joint(j).velocity_start() + 23,
+                      plant.get_joint(j).velocity_start() + 30) = 1;
+  }
+  drake::log()->info(feedback_selector);
+
+  //  auto connect_result =
+  //      systems::controllers::PidControlledSystem<double>::ConnectController(
+  //          plant.get_actuation_input_port(), plant.get_state_output_port(),
+  //          feedback_selector, Kp_, Ki_, Kd_, &builder);
+
+  // Create InverseDynamicsController
+  systems::controllers::InverseDynamicsController<double>&
+      feed_forward_controller = *builder
+           .AddSystem<systems::controllers::InverseDynamicsController<double>>(
+               fake_plant, Kp_, Ki_, Kd_, false);
+
+  // Set desired position [q,v]' for both IDC and PIDC
+  VectorX<double> constant_pos_value =
+      VectorX<double>::Ones(2 * U) * FLAGS_constant_pos;
+  auto desired_constant_source =
       builder.AddSystem<systems::ConstantVectorSource<double>>(
-          constant_load_value);
-  constant_source->set_name("constant_source");
-  builder.Connect(constant_source->get_output_port(),
-                  plant.get_actuation_input_port());
+          constant_pos_value);
+  desired_constant_source->set_name("desired_constant_source");
 
-  // Connect plant with scene_graph to get collision information
+  // Use Gain system to convert plant output to IDC state input
+  systems::MatrixGain<double>& select_controlled_states =
+      *builder.AddSystem<systems::MatrixGain<double>>(feedback_selector);
+
+  builder.Connect(feed_forward_controller.get_output_port_control(),
+                  plant.get_actuation_input_port());
+  builder.Connect(plant.get_state_output_port(),
+                  select_controlled_states.get_input_port());
+  builder.Connect(select_controlled_states.get_output_port(),
+                  feed_forward_controller.get_input_port_estimated_state());
+  builder.Connect(desired_constant_source->get_output_port(),
+                  feed_forward_controller.get_input_port_desired_state());
+
+  // Connect plant with scene_graph to get collision information.
   DRAKE_DEMAND(!!plant.get_source_id());
   builder.Connect(
       plant.get_geometry_poses_output_port(),
@@ -177,7 +238,7 @@ void DoMain() {
   geometry::ConnectDrakeVisualizer(&builder, scene_graph);
   std::unique_ptr<systems::Diagram<double>> diagram = builder.Build();
 
-  // Create a context for this system:
+  // Create a context for this diagram and plant.
   std::unique_ptr<systems::Context<double>> diagram_context =
       diagram->CreateDefaultContext();
   diagram->SetDefaultContext(diagram_context.get());
@@ -197,7 +258,7 @@ void DoMain() {
   // Set the robot COM position, make sure the robot base is off the ground.
   drake::VectorX<double> positions =
       plant.GetPositions(plant_context, plant_model_instance_index);
-  positions[6] = 2;
+  positions[6] = 1.0;
   plant.SetPositions(&plant_context, positions);
 
   // Set up simulator.
