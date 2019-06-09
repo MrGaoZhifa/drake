@@ -1,0 +1,106 @@
+<?xml version="1.0" ?>
+<sdf version="1.5">
+  <model name="simple_arm">
+    <link name="arm_base">
+      <visual name="arm_base_geom_visual">
+        <pose>0 0 0.05 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>1.0 1.0 0.1</size>
+          </box>
+        </geometry>
+      </visual>
+      <visual name="arm_base_geom_arm_trunk_visual">
+        <pose>0 0 0.6 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.05</radius>
+            <length>1.0</length>
+          </cylinder>
+        </geometry>
+      </visual>
+    </link>
+    <link name="arm_shoulder_pan">
+      <pose>0 0 1.1 0 0 0</pose>
+      <inertial>
+        <pose>0.045455 0 0 0 0 0</pose>
+        <inertia>
+          <ixx>0.011</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.0225</iyy>
+          <iyz>0</iyz>
+          <izz>0.0135</izz>
+        </inertia>
+        <mass>1.1</mass>
+      </inertial>
+      <visual name="arm_shoulder_pan_geom_arm_shoulder_visual">
+        <pose>0.55 0 0.05 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>1.0 0.05 0.1</size>
+          </box>
+        </geometry>
+      </visual>
+    </link>
+    <link name="arm_elbow_pan">
+      <pose>1.05 0 1.1 0 0 0</pose>
+      <inertial>
+        <pose>0.0875 0 0.083333 0 0 0</pose>
+        <inertia>
+          <ixx>0.031</ixx>
+          <ixy>0</ixy>
+          <ixz>0.005</ixz>
+          <iyy>0.07275</iyy>
+          <iyz>0</iyz>
+          <izz>0.04475</izz>
+        </inertia>
+        <mass>1.2</mass>
+      </inertial>      
+      <visual name="arm_elbow_pan_geom_arm_elbow_visual">
+        <pose>0.3 0 0.15 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.5 0.03 0.1</size>
+          </box>
+        </geometry>
+      </visual>
+    </link>
+
+    <joint name="arm_shoulder_pan_joint" type="revolute">
+      <parent>arm_base</parent>
+      <child>arm_shoulder_pan</child>
+      <axis>
+        <dynamics>
+          <damping>1.000000</damping>
+          <friction>0.000000</friction>
+        </dynamics>
+        <xyz>0 1 0</xyz>
+        <use_parent_model_frame>true</use_parent_model_frame>
+      </axis>
+    </joint>
+    <joint name="arm_elbow_pan_joint" type="revolute">
+      <parent>arm_shoulder_pan</parent>
+      <child>arm_elbow_pan</child>
+      <axis>
+        <dynamics>
+          <damping>1.000000</damping>
+          <friction>0.000000</friction>
+        </dynamics>
+        <xyz>0 1 0</xyz>
+        <use_parent_model_frame>true</use_parent_model_frame>
+      </axis>
+    </joint>
+    <joint name="arm_base_joint" type="fixed">
+      <parent>world</parent>
+      <child>arm_base</child>
+      <axis>
+        <limit>
+          <lower>0</lower>
+          <upper>0</upper>
+        </limit>
+        <xyz>0 0 1</xyz>
+      </axis>
+    </joint>
+  </model>
+</sdf>
