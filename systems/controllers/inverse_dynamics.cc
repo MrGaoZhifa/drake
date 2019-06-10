@@ -44,6 +44,7 @@ void InverseDynamics<T>::CalcOutputForce(const Context<T>& context,
                                           BasicVector<T>* output) const {
   // State input.
   VectorX<T> x = get_input_port_estimated_state().Eval(context);
+//  drake::log()->info(x.transpose());
 
   // Desired acceleration input.
   VectorX<T> desired_vd = VectorX<T>::Zero(v_dim_);
@@ -67,10 +68,12 @@ void InverseDynamics<T>::CalcOutputForce(const Context<T>& context,
   } else {
     // Compute inverse dynamics.
     multibody::MultibodyForces<T> external_forces(plant);
+    drake::log()->info(x.transpose());
     plant.CalcForceElementsContribution(
         *multibody_plant_context_, &external_forces);
     output->get_mutable_value() = plant.CalcInverseDynamics(
         *multibody_plant_context_, desired_vd, external_forces);
+    drake::log()->info(output->get_mutable_value().transpose());
   }
 }
 

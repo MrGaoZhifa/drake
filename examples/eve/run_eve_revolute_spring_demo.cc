@@ -104,7 +104,7 @@ void DoMain() {
 
   const std::string full_name = FindResourceOrThrow(
       "drake/manipulation/models/eve/"
-      "urdf/eve_7dof_arms_relative_no_hand_base.urdf");
+      "urdf/eve_7dof_arms_relative_base.urdf");
 
   ModelInstanceIndex plant_model_instance_index =
       parser.AddModelFromFile(full_name);
