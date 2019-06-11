@@ -124,7 +124,7 @@ void DoMain() {
   plant.mutable_gravity_field().set_gravity_vector(gravity_vector_W);
 
   // Weld the plant to the world frame
-  const auto& joint_eve_root = plant.GetBodyByName("pelvis");
+  const auto& joint_eve_root = plant.GetBodyByName("base");
   plant.AddJoint<multibody::WeldJoint>(
       "weld_base", plant.world_body(), nullopt, joint_eve_root, nullopt,
       Isometry3<double>::Identity());
@@ -165,16 +165,20 @@ void DoMain() {
 //      ", num_positions: " + std::to_string(fake_plant.num_positions()) +
 //      ", num_velocities: " + std::to_string(fake_plant.num_velocities()) +
 //      ", num_actuators: " + std::to_string(fake_plant.num_actuators()));
-//  for (multibody::JointActuatorIndex a(0); a < fake_plant.num_positions();
-//       ++a) {
-//    if (a<plant.num_positions())
-//      drake::log()->info(
-//        "PLANT JOINT: " + plant.get_joint_actuator(a).joint().name() +
-//        " has actuator " + plant.get_joint_actuator(a).name());
+  for (multibody::JointActuatorIndex a(0); a < plant.num_positions();
+       ++a) {
+    drake::log()->info(
+        "PLANT JOINT: " + plant.get_joint_actuator(a).joint().name() +
+        " has actuator " + plant.get_joint_actuator(a).name());
+    Eigen::VectorXd u_instance(1);
+    u_instance << 100;
+    Eigen::VectorXd u = Eigen::VectorXd::Zero(plant.num_velocities());
+    plant.get_joint_actuator(a).set_actuation_vector(u_instance, &u);
+    drake::log()->info(u.transpose());
 //    drake::log()->info(
 //        "FAKE PLANT JOINT: " + fake_plant.get_joint_actuator(a).joint().name() +
 //        " has actuator " + fake_plant.get_joint_actuator(a).name());
-//  }
+  }
   int index = 0;
   for (multibody::JointIndex j(0); j < plant.num_joints(); ++j) {
     drake::log()->info(std::to_string(index++));
@@ -226,14 +230,21 @@ void DoMain() {
 //  systems::MatrixGain<double>& select_controlled_states =
 //      *builder.AddSystem<systems::MatrixGain<double>>(feedback_selector);
   systems::MatrixGain<double>* select_actuation_states =
-      builder.AddSystem<systems::MatrixGain<double>>(plant.MakeActuationMatrix());
+      builder.AddSystem<systems::MatrixGain<double>>(plant.MakeActuationMatrix().transpose());
   (void) select_actuation_states;
-  builder.Connect(feed_forward_controller->get_output_port_control(),
-                  select_actuation_states->get_input_port());
-  builder.Connect(select_actuation_states->get_output_port(),
-                  plant.get_actuation_input_port());
 //  builder.Connect(feed_forward_controller->get_output_port_control(),
+//                  select_actuation_states->get_input_port());
+//  builder.Connect(select_actuation_states->get_output_port(),
 //                  plant.get_actuation_input_port());
+  VectorX<double> constantvalue =
+      VectorX<double>::Zero(plant.num_actuators());
+  auto tmp =
+      builder.AddSystem<systems::ConstantVectorSource<double>>(
+          constantvalue);
+  tmp->set_name("tmp");
+  builder.Connect(tmp->get_output_port(), plant.get_actuation_input_port());
+  builder.Connect(feed_forward_controller->get_output_port_control(),
+                  plant.get_applied_generalized_force_input_port());
   builder.Connect(plant.get_state_output_port(),
                   feed_forward_controller->get_input_port_estimated_state());
   builder.Connect(desired_constant_source->get_output_port(),
@@ -275,10 +286,12 @@ void DoMain() {
 //  plant.SetVelocities(&plant_context, constant_vel_value);
 
   // Set the robot COM position, make sure the robot base is off the ground.
-  drake::VectorX<double> positions =
-      plant.GetPositions(plant_context, plant_model_instance_index);
-  positions[0] = 0.4;
-  plant.SetPositions(&plant_context, positions);
+//  drake::VectorX<double> positions =
+//      plant.GetPositions(plant_context, plant_model_instance_index);
+//  positions[0] = 0.4;
+//  plant.SetPositions(&plant_context, positions);
+  drake::VectorX<double> velocities = Eigen::VectorXd::Ones(plant.num_velocities()) * 0.1;
+  plant.SetVelocities(&plant_context, velocities);
 
   // Set up simulator.
   drake::log()->info("\nNow starts Simulation\n");
