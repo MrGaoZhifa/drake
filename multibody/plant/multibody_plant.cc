@@ -1358,7 +1358,7 @@ void MultibodyPlant<T>::DoCalcTimeDerivatives(
     systems::ContinuousState<T>* derivatives) const {
   // No derivatives to compute if state is discrete.
   if (is_discrete()) return;
-
+  drake::log()->info("This is a continuous system.");
   const auto x =
       dynamic_cast<const systems::BasicVector<T>&>(
           context.get_continuous_state_vector()).get_value();
@@ -1630,6 +1630,8 @@ void MultibodyPlant<T>::DoCalcDiscreteVariableUpdates(
     const drake::systems::Context<T>& context0,
     const std::vector<const drake::systems::DiscreteUpdateEvent<T>*>&,
     drake::systems::DiscreteValues<T>* updates) const {
+
+  drake::log()->info("this is a discrete system.");
   const int nq = this->num_positions();
   const int nv = this->num_velocities();
 
@@ -1652,6 +1654,7 @@ void MultibodyPlant<T>::DoCalcDiscreteVariableUpdates(
 
   VectorX<T> x_next(this->num_multibody_states());
   x_next << q_next, v_next;
+  drake::log()->info(x_next.transpose());
   updates->get_mutable_vector(0).SetFromVector(x_next);
 }
 

@@ -68,9 +68,10 @@ void InverseDynamics<T>::CalcOutputForce(const Context<T>& context,
   } else {
     // Compute inverse dynamics.
     multibody::MultibodyForces<T> external_forces(plant);
-    drake::log()->info(x.transpose());
+//    drake::log()->info(x.transpose());
     plant.CalcForceElementsContribution(
         *multibody_plant_context_, &external_forces);
+//    drake::log()->info(external_forces.generalized_forces().transpose());
     output->get_mutable_value() = plant.CalcInverseDynamics(
         *multibody_plant_context_, desired_vd, external_forces);
     drake::log()->info(output->get_mutable_value().transpose());

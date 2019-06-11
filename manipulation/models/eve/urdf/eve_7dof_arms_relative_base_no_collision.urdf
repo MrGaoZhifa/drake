@@ -1,151 +1,151 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <robot xmlns:ns2="http://www.ros.org" xmlns:xi="http://www.w3.org/2003/XInclude" name="Eve_base">
 
-<!--  <link name="pelvis">-->
-<!--    <inertial>-->
-<!--      <origin xyz="-0.01035145 -0.00576441 0.41289202" rpy="0.0 0.0 0.0"/>-->
-<!--      <mass value="10.11628645"/>-->
-<!--      <inertia ixx="0.16934147" ixy="1.49E-4" ixz="0.00652485" iyy="0.1566806" iyz="-0.00748297" izz="0.05486492"/>-->
-<!--    </inertial>-->
-<!--    <visual>-->
+  <link name="pelvis">
+    <inertial>
+      <origin xyz="-0.01035145 -0.00576441 0.41289202" rpy="0.0 0.0 0.0"/>
+      <mass value="10.11628645"/>
+      <inertia ixx="0.16934147" ixy="1.49E-4" ixz="0.00652485" iyy="0.1566806" iyz="-0.00748297" izz="0.05486492"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>
+      <geometry>
+        <mesh filename="package://eve/meshes/7dof_torso.obj" scale="1 1 1"/>
+      </geometry>
+    </visual>
+<!--    <collision>-->
 <!--      <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>-->
 <!--      <geometry>-->
-<!--        <mesh filename="package://eve/meshes/7dof_torso.obj" scale="1 1 1"/>-->
+<!--        <sphere radius="0.12"/>-->
 <!--      </geometry>-->
-<!--    </visual>-->
-<!--&lt;!&ndash;    <collision>&ndash;&gt;-->
-<!--&lt;!&ndash;      <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>&ndash;&gt;-->
-<!--&lt;!&ndash;      <geometry>&ndash;&gt;-->
-<!--&lt;!&ndash;        <sphere radius="0.12"/>&ndash;&gt;-->
-<!--&lt;!&ndash;      </geometry>&ndash;&gt;-->
-<!--&lt;!&ndash;    </collision>&ndash;&gt;-->
-<!--  </link>-->
-<!--  <joint name="j_hip_z" type="revolute">-->
-<!--    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>-->
-<!--    <parent link="abdomen"/>-->
-<!--    <child link="pelvis"/>-->
-<!--    <axis xyz="0.0 0.0 -1.0"/>-->
-<!--    <limit lower="-1.0472" upper="1.0472" effort="-1.0" velocity="1.0"/>-->
-<!--  </joint>-->
-<!--  <transmission name="j_hip_z_trans">-->
-<!--	  <type>SimpleTransmission</type>-->
-<!--	  <joint name="j_hip_z">-->
-<!--	    <hardwareInterface>EffortJointInterface</hardwareInterface>-->
-<!--	  </joint>-->
-<!--	  <actuator name="j_hip_z_actuator">-->
-<!--	  </actuator>-->
-<!--  </transmission>-->
-<!--  <gazebo reference="pelvis">-->
-<!--    <sensor name="imu_sensor" type="imu">-->
-<!--      <always_on>1</always_on>-->
-<!--      <update_rate>1000</update_rate>-->
-<!--      <imu>-->
-<!--        <noise>-->
-<!--          <type>gaussian</type>-->
-<!--          <rate>-->
-<!--            <mean>0</mean>-->
-<!--            <stddev>0.0002</stddev>-->
-<!--            <bias_mean>7.5e-06</bias_mean>-->
-<!--            <bias_stddev>8e-07</bias_stddev>-->
-<!--          </rate>-->
-<!--          <accel>-->
-<!--            <mean>0</mean>-->
-<!--            <stddev>0.017</stddev>-->
-<!--            <bias_mean>0.1</bias_mean>-->
-<!--            <bias_stddev>0.001</bias_stddev>-->
-<!--          </accel>-->
-<!--        </noise>-->
-<!--      </imu>-->
-<!--      <pose frame="">0.0 0.0 0.142 0 0.0 0</pose>-->
-<!--    </sensor>-->
-<!--  </gazebo>-->
+<!--    </collision>-->
+  </link>
+  <joint name="j_hip_z" type="revolute">
+    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+    <parent link="abdomen"/>
+    <child link="pelvis"/>
+    <axis xyz="0.0 0.0 -1.0"/>
+    <limit lower="-1.0472" upper="1.0472" effort="-1.0" velocity="1.0"/>
+  </joint>
+  <transmission name="j_hip_z_trans">
+	  <type>SimpleTransmission</type>
+	  <joint name="j_hip_z">
+	    <hardwareInterface>EffortJointInterface</hardwareInterface>
+	  </joint>
+	  <actuator name="j_hip_z_actuator">
+	  </actuator>
+  </transmission>
+  <gazebo reference="pelvis">
+    <sensor name="imu_sensor" type="imu">
+      <always_on>1</always_on>
+      <update_rate>1000</update_rate>
+      <imu>
+        <noise>
+          <type>gaussian</type>
+          <rate>
+            <mean>0</mean>
+            <stddev>0.0002</stddev>
+            <bias_mean>7.5e-06</bias_mean>
+            <bias_stddev>8e-07</bias_stddev>
+          </rate>
+          <accel>
+            <mean>0</mean>
+            <stddev>0.017</stddev>
+            <bias_mean>0.1</bias_mean>
+            <bias_stddev>0.001</bias_stddev>
+          </accel>
+        </noise>
+      </imu>
+      <pose frame="">0.0 0.0 0.142 0 0.0 0</pose>
+    </sensor>
+  </gazebo>
 
-<!--  <link name="abdomen">-->
-<!--    <inertial>-->
-<!--      <origin xyz="-0.05558735 0.00156974 0.13110756" rpy="0.0 0.0 0.0"/>-->
-<!--      <mass value="3.4381772"/>-->
-<!--      <inertia ixx="0.05607222" ixy="7.0118E-4" ixz="-0.01468099" iyy="0.05435718" iyz="-0.00188443" izz="0.02016737"/>-->
-<!--    </inertial>-->
-<!--    <visual>-->
-<!--      <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>-->
-<!--      <geometry>-->
-<!--        <mesh filename="package://eve/meshes/abdomen.obj" scale="1 1 1"/>-->
-<!--      </geometry>-->
-<!--    </visual>-->
-<!--  </link>-->
-<!--  <joint name="j_hip_x" type="revolute">-->
-<!--    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>-->
-<!--    <parent link="hip_x_link"/>-->
-<!--    <child link="abdomen"/>-->
-<!--    <axis xyz="1.0 0.0 0.0"/>-->
-<!--    <limit lower="-0.523599" upper="0.523599" effort="-1.0" velocity="1.0"/>-->
-<!--  </joint>-->
-<!--  <transmission name="j_hip_x_trans">-->
-<!--    <type>SimpleTransmission</type>-->
-<!--    <joint name="j_hip_x">-->
-<!--      <hardwareInterface>EffortJointInterface</hardwareInterface>-->
-<!--    </joint>-->
-<!--    <actuator name="j_hip_x_actuator">-->
-<!--    </actuator>-->
-<!--  </transmission>-->
-<!--  <link name="hip_x_link">-->
-<!--    <inertial>-->
-<!--      <origin xyz="-0.013462 -0.001267 -7.7E-5" rpy="0.0 0.0 0.0"/>-->
-<!--      <mass value="2.868669"/>-->
-<!--      <inertia ixx="0.013678" ixy="5.6E-5" ixz="-7.6E-4" iyy="0.014884" iyz="1.4E-5" izz="0.016484"/>-->
-<!--    </inertial>-->
-<!--    <visual>-->
-<!--      <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>-->
-<!--      <geometry>-->
-<!--        <mesh filename="package://eve/meshes/hip.obj" scale="1 1 1"/>-->
-<!--      </geometry>-->
-<!--    </visual>-->
-<!--  </link>-->
-<!--  <joint name="j_hip_y" type="revolute">-->
-<!--    <origin xyz="0.0 0.0 0.4" rpy="0.0 0.0 0.0"/>-->
-<!--    <parent link="thigh"/>-->
-<!--    <child link="hip_x_link"/>-->
-<!--    <axis xyz="0.0 1.0 0.0"/>-->
-<!--    <limit lower="-1.57" upper="0.174533" effort="-1.0" velocity="1.0"/>-->
-<!--  </joint>-->
-<!--  <transmission name="j_hip_y_trans">-->
-<!--    <type>SimpleTransmission</type>-->
-<!--    <joint name="j_hip_y">-->
-<!--      <hardwareInterface>EffortJointInterface</hardwareInterface>-->
-<!--    </joint>-->
-<!--    <actuator name="j_hip_y_actuator">-->
-<!--    </actuator>-->
-<!--  </transmission>-->
-<!--  <link name="thigh">-->
-<!--    <inertial>-->
-<!--      &lt;!&ndash; <origin xyz="0.048668 0.002117 -0.216367" rpy="0.0 0.0 0.0"/> &ndash;&gt;-->
-<!--      <origin xyz="0.048668 0.002117 0.183633" rpy="0.0 0.0 0.0"/>-->
-<!--      <mass value="12.846698"/>-->
-<!--      <inertia ixx="0.172201" ixy="-0.001348" ixz="0.012646" iyy="0.155119" iyz="-6.0E-4" izz="0.076153"/>-->
-<!--    </inertial>-->
-<!--    <visual>-->
-<!--      <origin xyz="0.0 0.0 0.4" rpy="1.5707963 0.0 1.5707963"/>-->
-<!--      <geometry>-->
-<!--        <mesh filename="package://eve/meshes/thigh.obj" scale="1 1 1"/>-->
-<!--      </geometry>-->
-<!--    </visual>-->
-<!--  </link>-->
-<!--  <joint name="j_knee_y" type="revolute">-->
-<!--    &lt;!&ndash; <origin xyz="0.0 0.0 -0.4" rpy="0.0 0.0 0.0"/> &ndash;&gt;-->
-<!--    <origin xyz="0.0 0.0 0.38" rpy="0.0 0.0 0.0"/>-->
-<!--    <parent link="shin"/>-->
-<!--    <child link="thigh"/>-->
-<!--    <axis xyz="0.0 1.0 0.0"/>-->
-<!--    <limit lower="0.0" upper="2.583" effort="-1.0" velocity="1.0"/>-->
-<!--  </joint>-->
-<!--  <transmission name="j_knee_y_trans">-->
-<!--    <type>SimpleTransmission</type>-->
-<!--    <joint name="j_knee_y">-->
-<!--      <hardwareInterface>EffortJointInterface</hardwareInterface>-->
-<!--    </joint>-->
-<!--    <actuator name="j_knee_y_actuator">-->
-<!--    </actuator>-->
-<!--  </transmission>-->
+  <link name="abdomen">
+    <inertial>
+      <origin xyz="-0.05558735 0.00156974 0.13110756" rpy="0.0 0.0 0.0"/>
+      <mass value="3.4381772"/>
+      <inertia ixx="0.05607222" ixy="7.0118E-4" ixz="-0.01468099" iyy="0.05435718" iyz="-0.00188443" izz="0.02016737"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>
+      <geometry>
+        <mesh filename="package://eve/meshes/abdomen.obj" scale="1 1 1"/>
+      </geometry>
+    </visual>
+  </link>
+  <joint name="j_hip_x" type="revolute">
+    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+    <parent link="hip_x_link"/>
+    <child link="abdomen"/>
+    <axis xyz="1.0 0.0 0.0"/>
+    <limit lower="-0.523599" upper="0.523599" effort="-1.0" velocity="1.0"/>
+  </joint>
+  <transmission name="j_hip_x_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_hip_x">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_hip_x_actuator">
+    </actuator>
+  </transmission>
+  <link name="hip_x_link">
+    <inertial>
+      <origin xyz="-0.013462 -0.001267 -7.7E-5" rpy="0.0 0.0 0.0"/>
+      <mass value="2.868669"/>
+      <inertia ixx="0.013678" ixy="5.6E-5" ixz="-7.6E-4" iyy="0.014884" iyz="1.4E-5" izz="0.016484"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>
+      <geometry>
+        <mesh filename="package://eve/meshes/hip.obj" scale="1 1 1"/>
+      </geometry>
+    </visual>
+  </link>
+  <joint name="j_hip_y" type="revolute">
+    <origin xyz="0.0 0.0 0.4" rpy="0.0 0.0 0.0"/>
+    <parent link="thigh"/>
+    <child link="hip_x_link"/>
+    <axis xyz="0.0 1.0 0.0"/>
+    <limit lower="-1.57" upper="0.174533" effort="-1.0" velocity="1.0"/>
+  </joint>
+  <transmission name="j_hip_y_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_hip_y">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_hip_y_actuator">
+    </actuator>
+  </transmission>
+  <link name="thigh">
+    <inertial>
+      <!-- <origin xyz="0.048668 0.002117 -0.216367" rpy="0.0 0.0 0.0"/> -->
+      <origin xyz="0.048668 0.002117 0.183633" rpy="0.0 0.0 0.0"/>
+      <mass value="12.846698"/>
+      <inertia ixx="0.172201" ixy="-0.001348" ixz="0.012646" iyy="0.155119" iyz="-6.0E-4" izz="0.076153"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0 0.0 0.4" rpy="1.5707963 0.0 1.5707963"/>
+      <geometry>
+        <mesh filename="package://eve/meshes/thigh.obj" scale="1 1 1"/>
+      </geometry>
+    </visual>
+  </link>
+  <joint name="j_knee_y" type="revolute">
+    <!-- <origin xyz="0.0 0.0 -0.4" rpy="0.0 0.0 0.0"/> -->
+    <origin xyz="0.0 0.0 0.38" rpy="0.0 0.0 0.0"/>
+    <parent link="shin"/>
+    <child link="thigh"/>
+    <axis xyz="0.0 1.0 0.0"/>
+    <limit lower="0.0" upper="2.583" effort="-1.0" velocity="1.0"/>
+  </joint>
+  <transmission name="j_knee_y_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_knee_y">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_knee_y_actuator">
+    </actuator>
+  </transmission>
   <link name="shin">
     <inertial>
       <!-- <origin xyz="0.019484 6.7E-5 -0.167324" rpy="0.0 0.0 0.0"/> -->
@@ -308,476 +308,476 @@
 
 
 
-<!--  <joint name="j_r_shoulder_y" type="revolute">-->
-<!--    <origin xyz="0.010525 -0.207221 0.545525" rpy="-0.253261563 0.0 0.261799"/>-->
-<!--    <parent link="pelvis"/>-->
-<!--    <child link="r_scapula"/>-->
-<!--    <axis xyz="0.0 1.0 0.0"/>-->
-<!--    <limit lower="-2.4240878" upper="0.981049573" effort="-1.0" velocity="1.0"/>-->
-<!--  </joint>-->
-<!--  <transmission name="j_r_shoulder_y_trans">-->
-<!--    <type>SimpleTransmission</type>-->
-<!--    <joint name="j_r_shoulder_y">-->
-<!--      <hardwareInterface>EffortJointInterface</hardwareInterface>-->
-<!--    </joint>-->
-<!--    <actuator name="j_r_shoulder_y_actuator">-->
-<!--    </actuator>-->
-<!--  </transmission>-->
-<!--  <link name="r_scapula">-->
-<!--    <inertial>-->
-<!--      <origin xyz="6.1099E-4 0.06306661 0.03032448" rpy="0.0 0.0 0.0"/>-->
-<!--      <mass value="2.75566786"/>-->
-<!--      <inertia ixx="0.00936557" ixy="2.264E-5" ixz="-7.112E-5" iyy="0.01079015" iyz="8.423E-4" izz="0.01267759"/>-->
-<!--    </inertial>-->
-<!--    <visual>-->
-<!--      <origin xyz="0.0 0.0 0.0" rpy="1.5707963 1.5707963 0.0"/>-->
-<!--      <geometry>-->
-<!--        <mesh filename="../meshes/7dof_scapula.obj" scale="1 1 1"/>-->
-<!--      </geometry>-->
-<!--    </visual>-->
-<!--  </link>-->
-<!--  <joint name="j_r_shoulder_x" type="revolute">-->
-<!--    <origin xyz="0.0 0.0 0.0" rpy="0.253261563 0.0 0.0"/>-->
-<!--    <parent link="r_scapula"/>-->
-<!--    <child link="r_shoulder"/>-->
-<!--    <axis xyz="1.0 0.0 0.0"/>-->
-<!--    <limit lower="-2.0943951" upper="0.0872665" effort="-1.0" velocity="1.0"/>-->
-<!--  </joint>-->
-<!--  <transmission name="j_r_shoulder_x_trans">-->
-<!--    <type>SimpleTransmission</type>-->
-<!--    <joint name="j_r_shoulder_x">-->
-<!--      <hardwareInterface>EffortJointInterface</hardwareInterface>-->
-<!--    </joint>-->
-<!--    <actuator name="j_r_shoulder_x_actuator">-->
-<!--    </actuator>-->
-<!--  </transmission>-->
-<!--  <link name="r_shoulder">-->
-<!--    <inertial>-->
-<!--      <origin xyz="0.0 -7.0614E-4 -0.01975465" rpy="0.0 0.0 0.0"/>-->
-<!--      <mass value="0.70264272"/>-->
-<!--      <inertia ixx="0.00115475" ixy="-3.2E-7" ixz="-1.4E-7" iyy="0.00143713" iyz="2.63E-6" izz="9.4633E-4"/>-->
-<!--    </inertial>-->
-<!--    <visual>-->
-<!--      <origin xyz="0.0 0.0 0.0" rpy="1.5708 0 0"/>-->
-<!--      <geometry>-->
-<!--        <mesh filename="../meshes/7dof_shoulder.obj" scale="1 1 1"/>-->
-<!--      </geometry>-->
-<!--    </visual>-->
-<!--  </link>-->
-<!--  <joint name="j_r_shoulder_z" type="revolute">-->
-<!--    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 -0.261799"/>-->
-<!--    <parent link="r_shoulder"/>-->
-<!--    <child link="r_upper_arm"/>-->
-<!--    <axis xyz="0.0 0.0 1.0"/>-->
-<!--    <limit lower="0.0872665" upper="2.0943951" effort="-1.0" velocity="1.0"/>-->
-<!--  </joint>-->
-<!--  <transmission name="j_r_shoulder_z_trans">-->
-<!--    <type>SimpleTransmission</type>-->
-<!--    <joint name="j_r_shoulder_z">-->
-<!--      <hardwareInterface>EffortJointInterface</hardwareInterface>-->
-<!--    </joint>-->
-<!--    <actuator name="j_r_shoulder_z_actuator">-->
-<!--    </actuator>-->
-<!--  </transmission>-->
-<!--  <link name="r_upper_arm">-->
-<!--    <inertial>-->
-<!--      <origin xyz="-0.0062579 3.507E-5 -0.17187666" rpy="0.0 0.0 0.0"/>-->
-<!--      <mass value="2.92531724"/>-->
-<!--      <inertia ixx="0.01341653" ixy="-6.4E-7" ixz="-2.9063E-4" iyy="0.01287847" iyz="-3.08E-6" izz="0.00487381"/>-->
-<!--    </inertial>-->
-<!--    <visual>-->
-<!--      <origin xyz="0.0 0.0 -0.314" rpy="1.5707963 0.0 1.5707963"/>-->
-<!--      <geometry>-->
-<!--        <mesh filename="../meshes/7dof_upper_arm.obj" scale="1 1 1"/>-->
-<!--      </geometry>-->
-<!--    </visual>-->
-<!--  </link>-->
-<!--  <joint name="j_r_elbow_y" type="revolute">-->
-<!--    <origin xyz="0.0 0.0 -0.313989" rpy="0.0 0.0 0.0"/>-->
-<!--    <parent link="r_upper_arm"/>-->
-<!--    <child link="r_elbow"/>-->
-<!--    <axis xyz="0.0 1 0.0"/>-->
-<!--    <limit lower="-2.18166" upper="0.0" effort="-1.0" velocity="1.0"/>-->
-<!--  </joint>-->
-<!--  <transmission name="j_r_elbow_y_trans">-->
-<!--    <type>SimpleTransmission</type>-->
-<!--    <joint name="j_r_elbow_y">-->
-<!--      <hardwareInterface>EffortJointInterface</hardwareInterface>-->
-<!--    </joint>-->
-<!--    <actuator name="j_r_elbow_y_actuator">-->
-<!--    </actuator>-->
-<!--  </transmission>-->
-<!--  <link name="r_elbow">-->
-<!--    <inertial>-->
-<!--      <origin xyz="5.494E-5 0.0 -0.00888504" rpy="0.0 0.0 0.0"/>-->
-<!--      <mass value="0.46261553"/>-->
-<!--      <inertia ixx="8.227E-4" ixy="-0.0" ixz="9.6E-7" iyy="3.6441E-4" iyz="-0.0" izz="6.1472E-4"/>-->
-<!--    </inertial>-->
-<!--    <visual>-->
+  <joint name="j_r_shoulder_y" type="revolute">
+    <origin xyz="0.010525 -0.207221 0.545525" rpy="-0.253261563 0.0 0.261799"/>
+    <parent link="pelvis"/>
+    <child link="r_scapula"/>
+    <axis xyz="0.0 1.0 0.0"/>
+    <limit lower="-2.4240878" upper="0.981049573" effort="-1.0" velocity="1.0"/>
+  </joint>
+  <transmission name="j_r_shoulder_y_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_r_shoulder_y">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_r_shoulder_y_actuator">
+    </actuator>
+  </transmission>
+  <link name="r_scapula">
+    <inertial>
+      <origin xyz="6.1099E-4 0.06306661 0.03032448" rpy="0.0 0.0 0.0"/>
+      <mass value="2.75566786"/>
+      <inertia ixx="0.00936557" ixy="2.264E-5" ixz="-7.112E-5" iyy="0.01079015" iyz="8.423E-4" izz="0.01267759"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0 0.0 0.0" rpy="1.5707963 1.5707963 0.0"/>
+      <geometry>
+        <mesh filename="../meshes/7dof_scapula.obj" scale="1 1 1"/>
+      </geometry>
+    </visual>
+  </link>
+  <joint name="j_r_shoulder_x" type="revolute">
+    <origin xyz="0.0 0.0 0.0" rpy="0.253261563 0.0 0.0"/>
+    <parent link="r_scapula"/>
+    <child link="r_shoulder"/>
+    <axis xyz="1.0 0.0 0.0"/>
+    <limit lower="-2.0943951" upper="0.0872665" effort="-1.0" velocity="1.0"/>
+  </joint>
+  <transmission name="j_r_shoulder_x_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_r_shoulder_x">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_r_shoulder_x_actuator">
+    </actuator>
+  </transmission>
+  <link name="r_shoulder">
+    <inertial>
+      <origin xyz="0.0 -7.0614E-4 -0.01975465" rpy="0.0 0.0 0.0"/>
+      <mass value="0.70264272"/>
+      <inertia ixx="0.00115475" ixy="-3.2E-7" ixz="-1.4E-7" iyy="0.00143713" iyz="2.63E-6" izz="9.4633E-4"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0 0.0 0.0" rpy="1.5708 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/7dof_shoulder.obj" scale="1 1 1"/>
+      </geometry>
+    </visual>
+  </link>
+  <joint name="j_r_shoulder_z" type="revolute">
+    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 -0.261799"/>
+    <parent link="r_shoulder"/>
+    <child link="r_upper_arm"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="0.0872665" upper="2.0943951" effort="-1.0" velocity="1.0"/>
+  </joint>
+  <transmission name="j_r_shoulder_z_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_r_shoulder_z">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_r_shoulder_z_actuator">
+    </actuator>
+  </transmission>
+  <link name="r_upper_arm">
+    <inertial>
+      <origin xyz="-0.0062579 3.507E-5 -0.17187666" rpy="0.0 0.0 0.0"/>
+      <mass value="2.92531724"/>
+      <inertia ixx="0.01341653" ixy="-6.4E-7" ixz="-2.9063E-4" iyy="0.01287847" iyz="-3.08E-6" izz="0.00487381"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0 0.0 -0.314" rpy="1.5707963 0.0 1.5707963"/>
+      <geometry>
+        <mesh filename="../meshes/7dof_upper_arm.obj" scale="1 1 1"/>
+      </geometry>
+    </visual>
+  </link>
+  <joint name="j_r_elbow_y" type="revolute">
+    <origin xyz="0.0 0.0 -0.313989" rpy="0.0 0.0 0.0"/>
+    <parent link="r_upper_arm"/>
+    <child link="r_elbow"/>
+    <axis xyz="0.0 1 0.0"/>
+    <limit lower="-2.18166" upper="0.0" effort="-1.0" velocity="1.0"/>
+  </joint>
+  <transmission name="j_r_elbow_y_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_r_elbow_y">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_r_elbow_y_actuator">
+    </actuator>
+  </transmission>
+  <link name="r_elbow">
+    <inertial>
+      <origin xyz="5.494E-5 0.0 -0.00888504" rpy="0.0 0.0 0.0"/>
+      <mass value="0.46261553"/>
+      <inertia ixx="8.227E-4" ixy="-0.0" ixz="9.6E-7" iyy="3.6441E-4" iyz="-0.0" izz="6.1472E-4"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>
+      <geometry>
+        <mesh filename="../meshes/7dof_elbow.obj" scale="1 1 1"/>
+      </geometry>
+    </visual>
+<!--    <collision>-->
 <!--      <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>-->
 <!--      <geometry>-->
-<!--        <mesh filename="../meshes/7dof_elbow.obj" scale="1 1 1"/>-->
+<!--        <sphere radius="0.07"/>-->
 <!--      </geometry>-->
-<!--    </visual>-->
-<!--&lt;!&ndash;    <collision>&ndash;&gt;-->
-<!--&lt;!&ndash;      <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>&ndash;&gt;-->
-<!--&lt;!&ndash;      <geometry>&ndash;&gt;-->
-<!--&lt;!&ndash;        <sphere radius="0.07"/>&ndash;&gt;-->
-<!--&lt;!&ndash;      </geometry>&ndash;&gt;-->
-<!--&lt;!&ndash;    </collision>&ndash;&gt;-->
-<!--  </link>-->
-<!--  <joint name="j_r_elbow_z" type="revolute">-->
-<!--    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>-->
-<!--    <parent link="r_elbow"/>-->
-<!--    <child link="r_lower_arm"/>-->
-<!--    <axis xyz="0.0 0.0 1"/>-->
-<!--    <limit lower="-0.7854" upper="1.5708" effort="-1.0" velocity="1.0"/>-->
-<!--  </joint>-->
-<!--  <transmission name="j_r_elbow_z_trans">-->
-<!--    <type>SimpleTransmission</type>-->
-<!--    <joint name="j_r_elbow_z">-->
-<!--      <hardwareInterface>EffortJointInterface</hardwareInterface>-->
-<!--    </joint>-->
-<!--    <actuator name="j_r_elbow_z_actuator">-->
-<!--    </actuator>-->
-<!--  </transmission>-->
-<!--  <link name="r_lower_arm">-->
-<!--    <inertial>-->
-<!--      <origin xyz="-4.326E-5 3.091E-5 -0.13751046" rpy="0.0 0.0 0.0"/>-->
-<!--      <mass value="1.63933464"/>-->
-<!--      <inertia ixx="0.00678741" ixy="1.11E-6" ixz="-1.253E-5" iyy="0.00706746" iyz="1.485E-5" izz="0.00183806"/>-->
-<!--    </inertial>-->
-<!--    <visual>-->
-<!--      <origin xyz="0.0 0.0 -0.292850" rpy="1.5707963 0.0 1.5707963"/>-->
-<!--      <geometry>-->
-<!--        <mesh filename="../meshes/7dof_forearm.obj" scale="1 1 1"/>-->
-<!--      </geometry>-->
-<!--    </visual>-->
-<!--  </link>-->
-<!--  <joint name="j_r_wrist_y" type="revolute">-->
-<!--    <origin xyz="0.0 0.0 -0.292850" rpy="0.0 0.0 0.0"/>-->
-<!--    <parent link="r_lower_arm"/>-->
-<!--    <child link="r_wrist"/>-->
-<!--    <axis xyz="0.0 1 0.0"/>-->
-<!--    <limit lower="-0.785398" upper="0.785398" effort="-1.0" velocity="1.0"/>-->
-<!--  </joint>-->
-<!--  <transmission name="j_r_wrist_y_trans">-->
-<!--    <type>SimpleTransmission</type>-->
-<!--    <joint name="j_r_wrist_y">-->
-<!--      <hardwareInterface>EffortJointInterface</hardwareInterface>-->
-<!--    </joint>-->
-<!--    <actuator name="j_r_wrist_y_actuator">-->
-<!--    </actuator>-->
-<!--  </transmission>-->
-<!--  <link name="r_wrist">-->
-<!--    <inertial>-->
-<!--      <origin xyz="0.00240142 7.9666E-4 -0.00125392" rpy="0.0 0.0 0.0"/>-->
-<!--      <mass value="0.30363399"/>-->
-<!--      <inertia ixx="1.8188E-4" ixy="2.27E-6" ixz="-2.16E-6" iyy="1.6139E-4" iyz="-9.5E-7" izz="2.7335E-4"/>-->
-<!--    </inertial>-->
-<!--    <visual>-->
-<!--      <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>-->
-<!--      <geometry>-->
-<!--        <mesh filename="../meshes/7dof_wrist.obj" scale="1 1 1"/>-->
-<!--      </geometry>-->
-<!--    </visual>-->
-<!--  </link>-->
-<!--  <joint name="j_r_wrist_x" type="revolute">-->
-<!--    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>-->
-<!--    <parent link="r_wrist"/>-->
-<!--    <child link="r_palm"/>-->
-<!--    <axis xyz="1 0.0 0.0"/>-->
-<!--    <limit lower="-0.523599" upper="1.5708" effort="-1.0" velocity="1.0"/>-->
-<!--  </joint>-->
-<!--  <transmission name="j_r_wrist_x_trans">-->
-<!--    <type>SimpleTransmission</type>-->
-<!--    <joint name="j_r_wrist_x">-->
-<!--      <hardwareInterface>EffortJointInterface</hardwareInterface>-->
-<!--    </joint>-->
-<!--    <actuator name="j_r_wrist_x_actuator">-->
-<!--    </actuator>-->
-<!--  </transmission>-->
-<!--  <link name="r_palm">-->
-<!--    <inertial>-->
-<!--      <origin xyz="0.00618476 -0.00346679 -0.01888817" rpy="0.0 0.0 0.0"/>-->
-<!--      <mass value="0.1486378"/>-->
-<!--      <inertia ixx="1.177E-4" ixy="-2.72E-6" ixz="-1.656E-5" iyy="2.8407E-4" iyz="-5.49E-6" izz="2.1805E-4"/>-->
-<!--    </inertial>-->
-<!--    <visual>-->
-<!--      <origin xyz="0.0 0.0 0.0" rpy="-1.5707963 0.0 0.0"/>-->
-<!--      <geometry>-->
-<!--        <mesh filename="../meshes/7dof_palm.obj" scale="1 1 1"/>-->
-<!--      </geometry>-->
-<!--    </visual>-->
-<!--&lt;!&ndash;    <collision>&ndash;&gt;-->
-<!--&lt;!&ndash;      <origin xyz="0.0 0.0 0.0" rpy="-1.5707963 0.0 3.14159"/>&ndash;&gt;-->
-<!--&lt;!&ndash;      <geometry>&ndash;&gt;-->
-<!--&lt;!&ndash;        <sphere radius="0.05"/>&ndash;&gt;-->
-<!--&lt;!&ndash;      </geometry>&ndash;&gt;-->
-<!--&lt;!&ndash;    </collision>&ndash;&gt;-->
-<!--  </link>-->
-
-
-<!--  <joint name="j_l_shoulder_y" type="revolute">-->
-<!--    <origin xyz="0.010525 0.207221 0.545525" rpy="0.253261563 0.0 -0.261799"/>-->
-<!--    <parent link="pelvis"/>-->
-<!--    <child link="l_scapula"/>-->
-<!--    <axis xyz="0.0 1.0 0.0"/>-->
-<!--    <limit lower="-2.4240878" upper="0.981049573" effort="-1.0" velocity="1.0"/>-->
-<!--  </joint>-->
-<!--  <transmission name="j_l_shoulder_y_trans">-->
-<!--    <type>SimpleTransmission</type>-->
-<!--    <joint name="j_l_shoulder_y">-->
-<!--      <hardwareInterface>EffortJointInterface</hardwareInterface>-->
-<!--    </joint>-->
-<!--    <actuator name="j_l_shoulder_y_actuator">-->
-<!--    </actuator>-->
-<!--  </transmission>-->
-<!--  <link name="l_scapula">-->
-<!--    <inertial>-->
-<!--      <origin xyz="-6.1099E-4 -0.06306661 0.03032448" rpy="0.0 0.0 0.0"/>-->
-<!--      <mass value="2.75566786"/>-->
-<!--      <inertia ixx="0.00936557" ixy="2.264E-5" ixz="7.112E-5" iyy="0.01079015" iyz="-8.423E-4" izz="0.01267759"/>-->
-<!--    </inertial>-->
-<!--    <visual>-->
-<!--      <origin xyz="0.0 0.0 0.0" rpy="0.0 1.5707963 1.5707963"/>-->
-<!--      <geometry>-->
-<!--        <mesh filename="../meshes/7dof_scapula.obj" scale="1 1 1"/>-->
-<!--      </geometry>-->
-<!--    </visual>-->
-<!--  </link>-->
-<!--  <joint name="j_l_shoulder_x" type="revolute">-->
-<!--    <origin xyz="0.0 0.0 0.0" rpy="-0.253261563 0.0 0.0"/>-->
-<!--    <parent link="l_scapula"/>-->
-<!--    <child link="l_shoulder"/>-->
-<!--    <axis xyz="1.0 0.0 0.0"/>-->
-<!--    <limit lower="-0.0872665" upper="2.0943951" effort="-1.0" velocity="1.0"/>-->
-<!--  </joint>-->
-<!--  <transmission name="j_l_shoulder_x_trans">-->
-<!--    <type>SimpleTransmission</type>-->
-<!--    <joint name="j_l_shoulder_x">-->
-<!--      <hardwareInterface>EffortJointInterface</hardwareInterface>-->
-<!--    </joint>-->
-<!--    <actuator name="j_l_shoulder_x_actuator">-->
-<!--    </actuator>-->
-<!--  </transmission>-->
-<!--  <link name="l_shoulder">-->
-<!--    <inertial>-->
-<!--      <origin xyz="0.0 7.0624E-4 -0.01975437" rpy="0.0 0.0 0.0"/>-->
-<!--      <mass value="0.70265653"/>-->
-<!--      <inertia ixx="0.00115475" ixy="-3.2E-7" ixz="1.3E-7" iyy="0.00143715" iyz="-2.63E-6" izz="9.4634E-4"/>-->
-<!--    </inertial>-->
-<!--    <visual>-->
-<!--      <origin xyz="0.0 0.0 0.0" rpy="1.5708 0.0 0.0"/>-->
-<!--      <geometry>-->
-<!--        <mesh filename="../meshes/7dof_shoulder.obj" scale="1 1 1"/>-->
-<!--      </geometry>-->
-<!--    </visual>-->
-<!--  </link>-->
-<!--  <joint name="j_l_shoulder_z" type="revolute">-->
-<!--    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.261799"/>-->
-<!--    <parent link="l_shoulder"/>-->
-<!--    <child link="l_upper_arm"/>-->
-<!--    <axis xyz="0.0 0.0 1.0"/>-->
-<!--    <limit lower="-2.0943951" upper="-0.0872665" effort="-1.0" velocity="1.0"/>-->
-<!--  </joint>-->
-<!--  <transmission name="j_l_shoulder_z_trans">-->
-<!--    <type>SimpleTransmission</type>-->
-<!--    <joint name="j_l_shoulder_z">-->
-<!--      <hardwareInterface>EffortJointInterface</hardwareInterface>-->
-<!--    </joint>-->
-<!--    <actuator name="j_l_shoulder_z_actuator">-->
-<!--    </actuator>-->
-<!--  </transmission>-->
-<!--  <link name="l_upper_arm">-->
-<!--    <inertial>-->
-<!--      <origin xyz="-0.0062579 3.507E-5 -0.17187666" rpy="0.0 0.0 0.0"/>-->
-<!--      <mass value="2.92531724"/>-->
-<!--      <inertia ixx="0.01341653" ixy="-6.4E-7" ixz="-2.9063E-4" iyy="0.01287847" iyz="-3.08E-6" izz="0.00487381"/>-->
-<!--    </inertial>-->
-<!--    <visual>-->
-<!--      <origin xyz="0.0 0.0 -0.314" rpy="1.5707963 0.0 1.5707963"/>-->
-<!--      <geometry>-->
-<!--        <mesh filename="../meshes/7dof_upper_arm.obj" scale="1 1 1"/>-->
-<!--      </geometry>-->
-<!--    </visual>-->
-<!--  </link>-->
-<!--  <joint name="j_l_elbow_y" type="revolute">-->
-<!--    <origin xyz="0.0 0.0 -0.313989" rpy="0.0 0.0 0.0"/>-->
-<!--    <parent link="l_upper_arm"/>-->
-<!--    <child link="l_elbow"/>-->
-<!--    <axis xyz="0.0 1.0 0.0"/>-->
-<!--    <limit lower="-2.18166" upper="0.0" effort="-1.0" velocity="1.0"/>-->
-<!--  </joint>-->
-<!--  <transmission name="j_l_elbow_y_trans">-->
-<!--    <type>SimpleTransmission</type>-->
-<!--    <joint name="j_l_elbow_y">-->
-<!--      <hardwareInterface>EffortJointInterface</hardwareInterface>-->
-<!--    </joint>-->
-<!--    <actuator name="j_l_elbow_y_actuator">-->
-<!--    </actuator>-->
-<!--  </transmission>-->
-<!--  <link name="l_elbow">-->
-<!--    <inertial>-->
-<!--      <origin xyz="5.494E-5 0.0 -0.00888504" rpy="0.0 0.0 0.0"/>-->
-<!--      <mass value="0.46261553"/>-->
-<!--      <inertia ixx="8.227E-4" ixy="-0.0" ixz="9.6E-7" iyy="3.6441E-4" iyz="-0.0" izz="6.1472E-4"/>-->
-<!--    </inertial>-->
-<!--    <visual>-->
-<!--      <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>-->
-<!--      <geometry>-->
-<!--        <mesh filename="../meshes/7dof_elbow.obj" scale="1 1 1"/>-->
-<!--      </geometry>-->
-<!--    </visual>-->
-<!--&lt;!&ndash;    <collision>&ndash;&gt;-->
-<!--&lt;!&ndash;      <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>&ndash;&gt;-->
-<!--&lt;!&ndash;      <geometry>&ndash;&gt;-->
-<!--&lt;!&ndash;        <sphere radius="0.07"/>&ndash;&gt;-->
-<!--&lt;!&ndash;      </geometry>&ndash;&gt;-->
-<!--&lt;!&ndash;    </collision>&ndash;&gt;-->
-<!--  </link>-->
-<!--  <joint name="j_l_elbow_z" type="revolute">-->
-<!--    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>-->
-<!--    <parent link="l_elbow"/>-->
-<!--    <child link="l_lower_arm"/>-->
-<!--    <axis xyz="0.0 0.0 1.0"/>-->
-<!--    <limit lower="-1.5708" upper="0.7854" effort="-1.0" velocity="1.0"/>-->
-<!--  </joint>-->
-<!--  <transmission name="j_l_elbow_z_trans">-->
-<!--    <type>SimpleTransmission</type>-->
-<!--    <joint name="j_l_elbow_z">-->
-<!--      <hardwareInterface>EffortJointInterface</hardwareInterface>-->
-<!--    </joint>-->
-<!--    <actuator name="j_l_elbow_z_actuator">-->
-<!--    </actuator>-->
-<!--  </transmission>-->
-<!--  <link name="l_lower_arm">-->
-<!--    <inertial>-->
-<!--      <origin xyz="-4.326E-5 3.091E-5 -0.13751046" rpy="0.0 0.0 0.0"/>-->
-<!--      <mass value="1.63933464"/>-->
-<!--      <inertia ixx="0.00678741" ixy="1.11E-6" ixz="-1.253E-5" iyy="0.00706746" iyz="1.485E-5" izz="0.00183806"/>-->
-<!--    </inertial>-->
-<!--    <visual>-->
-<!--      <origin xyz="0.0 0.0 -0.29285" rpy="1.5707963 0.0 1.5707963"/>-->
-<!--      <geometry>-->
-<!--        <mesh filename="../meshes/7dof_forearm.obj" scale="1 1 1"/>-->
-<!--      </geometry>-->
-<!--    </visual>-->
-<!--  </link>-->
-<!--  <joint name="j_l_wrist_y" type="revolute">-->
-<!--    <origin xyz="0.0 0.0 -0.29285" rpy="0.0 0.0 0.0"/>-->
-<!--    <parent link="l_lower_arm"/>-->
-<!--    <child link="l_wrist"/>-->
-<!--    <axis xyz="0.0 1.0 0.0"/>-->
-<!--    <limit lower="-0.785398" upper="0.785398" effort="-1.0" velocity="1.0"/>-->
-<!--  </joint>-->
-<!--  <transmission name="j_l_wrist_y_trans">-->
-<!--    <type>SimpleTransmission</type>-->
-<!--    <joint name="j_l_wrist_y">-->
-<!--      <hardwareInterface>EffortJointInterface</hardwareInterface>-->
-<!--    </joint>-->
-<!--    <actuator name="j_l_wrist_y_actuator">-->
-<!--    </actuator>-->
-<!--  </transmission>-->
-<!--  <link name="l_wrist">-->
-<!--    <inertial>-->
-<!--      <origin xyz="0.00240142 7.9666E-4 -0.00125392" rpy="0.0 0.0 0.0"/>-->
-<!--      <mass value="0.30363399"/>-->
-<!--      <inertia ixx="1.8188E-4" ixy="2.27E-6" ixz="-2.16E-6" iyy="1.6139E-4" iyz="-9.5E-7" izz="2.7335E-4"/>-->
-<!--    </inertial>-->
-<!--    <visual>-->
-<!--      <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>-->
-<!--      <geometry>-->
-<!--        <mesh filename="../meshes/7dof_wrist.obj" scale="1 1 1"/>-->
-<!--      </geometry>-->
-<!--    </visual>-->
-<!--  </link>-->
-<!--  <joint name="j_l_wrist_x" type="revolute">-->
-<!--    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>-->
-<!--    <parent link="l_wrist"/>-->
-<!--    <child link="l_palm"/>-->
-<!--    <axis xyz="1.0 0.0 0.0"/>-->
-<!--    <limit lower="-1.5708" upper="0.523599" effort="-1.0" velocity="1.0"/>-->
-<!--  </joint>-->
-<!--  <transmission name="j_l_wrist_x_trans">-->
-<!--    <type>SimpleTransmission</type>-->
-<!--    <joint name="j_l_wrist_x">-->
-<!--      <hardwareInterface>EffortJointInterface</hardwareInterface>-->
-<!--    </joint>-->
-<!--    <actuator name="j_l_wrist_x_actuator">-->
-<!--    </actuator>-->
-<!--  </transmission>-->
-<!--  <link name="l_palm">-->
-<!--    <inertial>-->
-<!--      <origin xyz="0.00618476 -0.00346679 -0.01888817" rpy="0.0 0.0 0.0"/>-->
-<!--      <mass value="0.1486378"/>-->
-<!--      <inertia ixx="1.177E-4" ixy="-2.72E-6" ixz="-1.656E-5" iyy="2.8407E-4" iyz="-5.49E-6" izz="2.1805E-4"/>-->
-<!--    </inertial>-->
-<!--    <visual>-->
+<!--    </collision>-->
+  </link>
+  <joint name="j_r_elbow_z" type="revolute">
+    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+    <parent link="r_elbow"/>
+    <child link="r_lower_arm"/>
+    <axis xyz="0.0 0.0 1"/>
+    <limit lower="-0.7854" upper="1.5708" effort="-1.0" velocity="1.0"/>
+  </joint>
+  <transmission name="j_r_elbow_z_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_r_elbow_z">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_r_elbow_z_actuator">
+    </actuator>
+  </transmission>
+  <link name="r_lower_arm">
+    <inertial>
+      <origin xyz="-4.326E-5 3.091E-5 -0.13751046" rpy="0.0 0.0 0.0"/>
+      <mass value="1.63933464"/>
+      <inertia ixx="0.00678741" ixy="1.11E-6" ixz="-1.253E-5" iyy="0.00706746" iyz="1.485E-5" izz="0.00183806"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0 0.0 -0.292850" rpy="1.5707963 0.0 1.5707963"/>
+      <geometry>
+        <mesh filename="../meshes/7dof_forearm.obj" scale="1 1 1"/>
+      </geometry>
+    </visual>
+  </link>
+  <joint name="j_r_wrist_y" type="revolute">
+    <origin xyz="0.0 0.0 -0.292850" rpy="0.0 0.0 0.0"/>
+    <parent link="r_lower_arm"/>
+    <child link="r_wrist"/>
+    <axis xyz="0.0 1 0.0"/>
+    <limit lower="-0.785398" upper="0.785398" effort="-1.0" velocity="1.0"/>
+  </joint>
+  <transmission name="j_r_wrist_y_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_r_wrist_y">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_r_wrist_y_actuator">
+    </actuator>
+  </transmission>
+  <link name="r_wrist">
+    <inertial>
+      <origin xyz="0.00240142 7.9666E-4 -0.00125392" rpy="0.0 0.0 0.0"/>
+      <mass value="0.30363399"/>
+      <inertia ixx="1.8188E-4" ixy="2.27E-6" ixz="-2.16E-6" iyy="1.6139E-4" iyz="-9.5E-7" izz="2.7335E-4"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>
+      <geometry>
+        <mesh filename="../meshes/7dof_wrist.obj" scale="1 1 1"/>
+      </geometry>
+    </visual>
+  </link>
+  <joint name="j_r_wrist_x" type="revolute">
+    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+    <parent link="r_wrist"/>
+    <child link="r_palm"/>
+    <axis xyz="1 0.0 0.0"/>
+    <limit lower="-0.523599" upper="1.5708" effort="-1.0" velocity="1.0"/>
+  </joint>
+  <transmission name="j_r_wrist_x_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_r_wrist_x">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_r_wrist_x_actuator">
+    </actuator>
+  </transmission>
+  <link name="r_palm">
+    <inertial>
+      <origin xyz="0.00618476 -0.00346679 -0.01888817" rpy="0.0 0.0 0.0"/>
+      <mass value="0.1486378"/>
+      <inertia ixx="1.177E-4" ixy="-2.72E-6" ixz="-1.656E-5" iyy="2.8407E-4" iyz="-5.49E-6" izz="2.1805E-4"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0 0.0 0.0" rpy="-1.5707963 0.0 0.0"/>
+      <geometry>
+        <mesh filename="../meshes/7dof_palm.obj" scale="1 1 1"/>
+      </geometry>
+    </visual>
+<!--    <collision>-->
 <!--      <origin xyz="0.0 0.0 0.0" rpy="-1.5707963 0.0 3.14159"/>-->
 <!--      <geometry>-->
-<!--        <mesh filename="../meshes/7dof_palm.obj" scale="1 1 1"/>-->
+<!--        <sphere radius="0.05"/>-->
 <!--      </geometry>-->
-<!--    </visual>-->
-<!--&lt;!&ndash;    <collision>&ndash;&gt;-->
-<!--&lt;!&ndash;      <origin xyz="0.0 0.0 0.0" rpy="-1.5707963 0.0 3.14159"/>&ndash;&gt;-->
-<!--&lt;!&ndash;      <geometry>&ndash;&gt;-->
-<!--&lt;!&ndash;        <sphere radius="0.05"/>&ndash;&gt;-->
-<!--&lt;!&ndash;      </geometry>&ndash;&gt;-->
-<!--&lt;!&ndash;    </collision>&ndash;&gt;-->
-<!--  </link>-->
+<!--    </collision>-->
+  </link>
 
-<!--  <joint name="j_neck_y" type="revolute">-->
-<!--    <origin xyz="-0.004458 0.0 0.680766" rpy="0.0 0.0 0.0"/>-->
-<!--    <parent link="pelvis"/>-->
-<!--    <child link="head"/>-->
-<!--    <axis xyz="0.0 1 0.0"/>-->
-<!--    <limit lower="-0.0872664626" upper="0.698132" effort="-1.0" velocity="1.0"/>-->
-<!--  </joint>-->
-<!--  <transmission name="j_neck_y_trans">-->
-<!--    <type>SimpleTransmission</type>-->
-<!--    <joint name="j_neck_y">-->
-<!--      <hardwareInterface>EffortJointInterface</hardwareInterface>-->
-<!--    </joint>-->
-<!--    <actuator name="j_neck_y_actuator">-->
-<!--    </actuator>-->
-<!--  </transmission>-->
-<!--  <link name="head">-->
-<!--    <inertial>-->
-<!--      <origin xyz="0.01272383 -0.00326913 0.07053205" rpy="0.0 0.0 0.0"/>-->
-<!--      <mass value="2.355"/>-->
-<!--      <inertia ixx="0.01719944" ixy="-8.079E-5" ixz="-0.0013284" iyy="0.0196904" iyz="2.3833E-4" izz="0.0077437"/>-->
-<!--    </inertial>-->
-<!--    <visual>-->
+
+  <joint name="j_l_shoulder_y" type="revolute">
+    <origin xyz="0.010525 0.207221 0.545525" rpy="0.253261563 0.0 -0.261799"/>
+    <parent link="pelvis"/>
+    <child link="l_scapula"/>
+    <axis xyz="0.0 1.0 0.0"/>
+    <limit lower="-2.4240878" upper="0.981049573" effort="-1.0" velocity="1.0"/>
+  </joint>
+  <transmission name="j_l_shoulder_y_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_l_shoulder_y">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_l_shoulder_y_actuator">
+    </actuator>
+  </transmission>
+  <link name="l_scapula">
+    <inertial>
+      <origin xyz="-6.1099E-4 -0.06306661 0.03032448" rpy="0.0 0.0 0.0"/>
+      <mass value="2.75566786"/>
+      <inertia ixx="0.00936557" ixy="2.264E-5" ixz="7.112E-5" iyy="0.01079015" iyz="-8.423E-4" izz="0.01267759"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0 0.0 0.0" rpy="0.0 1.5707963 1.5707963"/>
+      <geometry>
+        <mesh filename="../meshes/7dof_scapula.obj" scale="1 1 1"/>
+      </geometry>
+    </visual>
+  </link>
+  <joint name="j_l_shoulder_x" type="revolute">
+    <origin xyz="0.0 0.0 0.0" rpy="-0.253261563 0.0 0.0"/>
+    <parent link="l_scapula"/>
+    <child link="l_shoulder"/>
+    <axis xyz="1.0 0.0 0.0"/>
+    <limit lower="-0.0872665" upper="2.0943951" effort="-1.0" velocity="1.0"/>
+  </joint>
+  <transmission name="j_l_shoulder_x_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_l_shoulder_x">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_l_shoulder_x_actuator">
+    </actuator>
+  </transmission>
+  <link name="l_shoulder">
+    <inertial>
+      <origin xyz="0.0 7.0624E-4 -0.01975437" rpy="0.0 0.0 0.0"/>
+      <mass value="0.70265653"/>
+      <inertia ixx="0.00115475" ixy="-3.2E-7" ixz="1.3E-7" iyy="0.00143715" iyz="-2.63E-6" izz="9.4634E-4"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0 0.0 0.0" rpy="1.5708 0.0 0.0"/>
+      <geometry>
+        <mesh filename="../meshes/7dof_shoulder.obj" scale="1 1 1"/>
+      </geometry>
+    </visual>
+  </link>
+  <joint name="j_l_shoulder_z" type="revolute">
+    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.261799"/>
+    <parent link="l_shoulder"/>
+    <child link="l_upper_arm"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-2.0943951" upper="-0.0872665" effort="-1.0" velocity="1.0"/>
+  </joint>
+  <transmission name="j_l_shoulder_z_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_l_shoulder_z">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_l_shoulder_z_actuator">
+    </actuator>
+  </transmission>
+  <link name="l_upper_arm">
+    <inertial>
+      <origin xyz="-0.0062579 3.507E-5 -0.17187666" rpy="0.0 0.0 0.0"/>
+      <mass value="2.92531724"/>
+      <inertia ixx="0.01341653" ixy="-6.4E-7" ixz="-2.9063E-4" iyy="0.01287847" iyz="-3.08E-6" izz="0.00487381"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0 0.0 -0.314" rpy="1.5707963 0.0 1.5707963"/>
+      <geometry>
+        <mesh filename="../meshes/7dof_upper_arm.obj" scale="1 1 1"/>
+      </geometry>
+    </visual>
+  </link>
+  <joint name="j_l_elbow_y" type="revolute">
+    <origin xyz="0.0 0.0 -0.313989" rpy="0.0 0.0 0.0"/>
+    <parent link="l_upper_arm"/>
+    <child link="l_elbow"/>
+    <axis xyz="0.0 1.0 0.0"/>
+    <limit lower="-2.18166" upper="0.0" effort="-1.0" velocity="1.0"/>
+  </joint>
+  <transmission name="j_l_elbow_y_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_l_elbow_y">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_l_elbow_y_actuator">
+    </actuator>
+  </transmission>
+  <link name="l_elbow">
+    <inertial>
+      <origin xyz="5.494E-5 0.0 -0.00888504" rpy="0.0 0.0 0.0"/>
+      <mass value="0.46261553"/>
+      <inertia ixx="8.227E-4" ixy="-0.0" ixz="9.6E-7" iyy="3.6441E-4" iyz="-0.0" izz="6.1472E-4"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>
+      <geometry>
+        <mesh filename="../meshes/7dof_elbow.obj" scale="1 1 1"/>
+      </geometry>
+    </visual>
+<!--    <collision>-->
 <!--      <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>-->
 <!--      <geometry>-->
-<!--        <mesh filename="../meshes/head.obj" scale="1 1 1"/>-->
+<!--        <sphere radius="0.07"/>-->
 <!--      </geometry>-->
-<!--    </visual>-->
-<!--&lt;!&ndash;    <collision>&ndash;&gt;-->
-<!--&lt;!&ndash;      <origin xyz="0.0 0.0 0.1" rpy="1.5707963 0.0 1.5707963"/>&ndash;&gt;-->
-<!--&lt;!&ndash;      <geometry>&ndash;&gt;-->
-<!--&lt;!&ndash;        <sphere radius="0.12"/>&ndash;&gt;-->
-<!--&lt;!&ndash;      </geometry>&ndash;&gt;-->
-<!--&lt;!&ndash;    </collision>&ndash;&gt;-->
-<!--  </link>-->
-<!--  <gazebo reference="head">-->
-<!--    <sensor name="realsense" type="camera">-->
-<!--      <camera>-->
-<!--        <image>-->
-<!--          <width>640</width>-->
-<!--          <height>480</height>-->
-<!--          <format>R8G8B8</format>-->
-<!--        </image>-->
-<!--        <horizontal_fov>1.487021</horizontal_fov>-->
-<!--        <clip>-->
-<!--          <near>0.2</near>-->
-<!--          <far>10</far>-->
-<!--        </clip>-->
-<!--      </camera>-->
-<!--      <update_rate>6</update_rate>-->
-<!--      <pose frame="">0.116669 0 0.17015 0 0.174533 0</pose>-->
-<!--    </sensor>-->
-<!--  </gazebo>-->
+<!--    </collision>-->
+  </link>
+  <joint name="j_l_elbow_z" type="revolute">
+    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+    <parent link="l_elbow"/>
+    <child link="l_lower_arm"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-1.5708" upper="0.7854" effort="-1.0" velocity="1.0"/>
+  </joint>
+  <transmission name="j_l_elbow_z_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_l_elbow_z">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_l_elbow_z_actuator">
+    </actuator>
+  </transmission>
+  <link name="l_lower_arm">
+    <inertial>
+      <origin xyz="-4.326E-5 3.091E-5 -0.13751046" rpy="0.0 0.0 0.0"/>
+      <mass value="1.63933464"/>
+      <inertia ixx="0.00678741" ixy="1.11E-6" ixz="-1.253E-5" iyy="0.00706746" iyz="1.485E-5" izz="0.00183806"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0 0.0 -0.29285" rpy="1.5707963 0.0 1.5707963"/>
+      <geometry>
+        <mesh filename="../meshes/7dof_forearm.obj" scale="1 1 1"/>
+      </geometry>
+    </visual>
+  </link>
+  <joint name="j_l_wrist_y" type="revolute">
+    <origin xyz="0.0 0.0 -0.29285" rpy="0.0 0.0 0.0"/>
+    <parent link="l_lower_arm"/>
+    <child link="l_wrist"/>
+    <axis xyz="0.0 1.0 0.0"/>
+    <limit lower="-0.785398" upper="0.785398" effort="-1.0" velocity="1.0"/>
+  </joint>
+  <transmission name="j_l_wrist_y_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_l_wrist_y">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_l_wrist_y_actuator">
+    </actuator>
+  </transmission>
+  <link name="l_wrist">
+    <inertial>
+      <origin xyz="0.00240142 7.9666E-4 -0.00125392" rpy="0.0 0.0 0.0"/>
+      <mass value="0.30363399"/>
+      <inertia ixx="1.8188E-4" ixy="2.27E-6" ixz="-2.16E-6" iyy="1.6139E-4" iyz="-9.5E-7" izz="2.7335E-4"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>
+      <geometry>
+        <mesh filename="../meshes/7dof_wrist.obj" scale="1 1 1"/>
+      </geometry>
+    </visual>
+  </link>
+  <joint name="j_l_wrist_x" type="revolute">
+    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+    <parent link="l_wrist"/>
+    <child link="l_palm"/>
+    <axis xyz="1.0 0.0 0.0"/>
+    <limit lower="-1.5708" upper="0.523599" effort="-1.0" velocity="1.0"/>
+  </joint>
+  <transmission name="j_l_wrist_x_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_l_wrist_x">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_l_wrist_x_actuator">
+    </actuator>
+  </transmission>
+  <link name="l_palm">
+    <inertial>
+      <origin xyz="0.00618476 -0.00346679 -0.01888817" rpy="0.0 0.0 0.0"/>
+      <mass value="0.1486378"/>
+      <inertia ixx="1.177E-4" ixy="-2.72E-6" ixz="-1.656E-5" iyy="2.8407E-4" iyz="-5.49E-6" izz="2.1805E-4"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0 0.0 0.0" rpy="-1.5707963 0.0 3.14159"/>
+      <geometry>
+        <mesh filename="../meshes/7dof_palm.obj" scale="1 1 1"/>
+      </geometry>
+    </visual>
+<!--    <collision>-->
+<!--      <origin xyz="0.0 0.0 0.0" rpy="-1.5707963 0.0 3.14159"/>-->
+<!--      <geometry>-->
+<!--        <sphere radius="0.05"/>-->
+<!--      </geometry>-->
+<!--    </collision>-->
+  </link>
+
+  <joint name="j_neck_y" type="revolute">
+    <origin xyz="-0.004458 0.0 0.680766" rpy="0.0 0.0 0.0"/>
+    <parent link="pelvis"/>
+    <child link="head"/>
+    <axis xyz="0.0 1 0.0"/>
+    <limit lower="-0.0872664626" upper="0.698132" effort="-1.0" velocity="1.0"/>
+  </joint>
+  <transmission name="j_neck_y_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_neck_y">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_neck_y_actuator">
+    </actuator>
+  </transmission>
+  <link name="head">
+    <inertial>
+      <origin xyz="0.01272383 -0.00326913 0.07053205" rpy="0.0 0.0 0.0"/>
+      <mass value="2.355"/>
+      <inertia ixx="0.01719944" ixy="-8.079E-5" ixz="-0.0013284" iyy="0.0196904" iyz="2.3833E-4" izz="0.0077437"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0 0.0 0.0" rpy="1.5707963 0.0 1.5707963"/>
+      <geometry>
+        <mesh filename="../meshes/head.obj" scale="1 1 1"/>
+      </geometry>
+    </visual>
+<!--    <collision>-->
+<!--      <origin xyz="0.0 0.0 0.1" rpy="1.5707963 0.0 1.5707963"/>-->
+<!--      <geometry>-->
+<!--        <sphere radius="0.12"/>-->
+<!--      </geometry>-->
+<!--    </collision>-->
+  </link>
+  <gazebo reference="head">
+    <sensor name="realsense" type="camera">
+      <camera>
+        <image>
+          <width>640</width>
+          <height>480</height>
+          <format>R8G8B8</format>
+        </image>
+        <horizontal_fov>1.487021</horizontal_fov>
+        <clip>
+          <near>0.2</near>
+          <far>10</far>
+        </clip>
+      </camera>
+      <update_rate>6</update_rate>
+      <pose frame="">0.116669 0 0.17015 0 0.174533 0</pose>
+    </sensor>
+  </gazebo>
 
 </robot>
