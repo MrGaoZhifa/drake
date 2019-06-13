@@ -1631,7 +1631,7 @@ void MultibodyPlant<T>::DoCalcDiscreteVariableUpdates(
     const std::vector<const drake::systems::DiscreteUpdateEvent<T>*>&,
     drake::systems::DiscreteValues<T>* updates) const {
 
-  drake::log()->info("this is a discrete system.");
+//  drake::log()->info("this is a discrete system.");
   const int nq = this->num_positions();
   const int nv = this->num_velocities();
 
@@ -1654,7 +1654,7 @@ void MultibodyPlant<T>::DoCalcDiscreteVariableUpdates(
 
   VectorX<T> x_next(this->num_multibody_states());
   x_next << q_next, v_next;
-  drake::log()->info(x_next.transpose());
+//  drake::log()->info(x_next.transpose());
   updates->get_mutable_vector(0).SetFromVector(x_next);
 }
 
