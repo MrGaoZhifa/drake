@@ -1,29 +1,8 @@
 /// @file
 ///
-/// This demo sets up a simple dynamic simulation for the Allegro hand using
-/// the multi-body library. A single, constant torque is applied to all joints
-/// and defined by a command-line parameter. This demo also allows to specify
-/// whether the right or left hand is simulated.
-
-/**
-                                              +----------+
-                                              |          |
-             +--------------------------------+MatrixGain+<-----------------+
-             |                                |          |                  |
-             |    +-------------------------+ +----------+ +--------------+ |
-             +--->+InverseDynamicsController|              |MultibodyPlant| |
-+------------+    |                         | +----------+ |              | |
-|Desired     |    |                         | |          | |              | |
-|states      +--->+                         +>+MatrixGain+>+              +-+
-|            |    |                         | |          | |              |
-+------------+ +->+       fake_plant        | +----------+ |    plant     |
-               |  |                         |              |              |
-+------------+ |  +-------------------------+              +--------------+
-|Desired     | |
-|acceleration+-+
-|            |
-+------------+
-**/
+/// This demo sets up a humanoid robot eve from halodi robotics. The file shows
+/// how to use inverse dynamics controller and pid controller to balance the
+/// robot.
 
 #include <gflags/gflags.h>
 
@@ -31,6 +10,7 @@
 #include <drake/multibody/tree/revolute_spring.h>
 #include <drake/systems/controllers/inverse_dynamics_controller.h>
 #include <drake/systems/controllers/pid_controlled_system.h>
+#include <drake/systems/primitives/multiplexer.h>
 #include "drake/common/drake_assert.h"
 #include "drake/common/find_resource.h"
 #include "drake/common/text_logging_gflags.h"
@@ -49,7 +29,6 @@
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/systems/primitives/constant_vector_source.h"
 #include "drake/systems/primitives/matrix_gain.h"
-#include <drake/systems/primitives/multiplexer.h>
 
 namespace drake {
 namespace examples {
@@ -264,10 +243,11 @@ void DoMain() {
                   feed_forward_controller->get_input_port_desired_state());
 
   // Select plant states and feed into controller with fake_plant.
-  Eigen::MatrixXd feedback_joints_selector = Eigen::MatrixXd::Zero(2 * U, Q + V);
+  Eigen::MatrixXd feedback_joints_selector =
+      Eigen::MatrixXd::Zero(2 * U, Q + V);
   for (multibody::JointIndex j(0); j < fake_plant.num_actuators(); ++j) {
     feedback_joints_selector(fake_plant.get_joint(j).position_start(),
-                      plant.get_joint(j).position_start()) = 1;
+                             plant.get_joint(j).position_start()) = 1;
     feedback_joints_selector(
         fake_plant.get_joint(j).velocity_start() + fake_plant.num_positions(),
         plant.get_joint(j).velocity_start() + plant.num_positions()) = 1;
@@ -286,17 +266,18 @@ void DoMain() {
   // Select generalized control signal and feed into plant.
   Eigen::MatrixXd generalized_actuation_selector =
       Eigen::MatrixXd::Zero(plant.num_velocities(), U);
-  generalized_actuation_selector.bottomRightCorner(U, U) = Eigen::MatrixXd::Identity(U, U);
+  generalized_actuation_selector.bottomRightCorner(U, U) =
+      Eigen::MatrixXd::Identity(U, U);
   drake::log()->info(generalized_actuation_selector);
   systems::MatrixGain<double>* select_generalized_actuation_states =
-      builder.AddSystem<systems::MatrixGain<double>>(generalized_actuation_selector);
+      builder.AddSystem<systems::MatrixGain<double>>(
+          generalized_actuation_selector);
   //  builder.Connect(feed_forward_controller->get_output_port_control(),
   //                  plant.get_applied_generalized_force_input_port());
   builder.Connect(feed_forward_controller->get_output_port_control(),
                   select_generalized_actuation_states->get_input_port());
   builder.Connect(select_generalized_actuation_states->get_output_port(),
                   plant.get_applied_generalized_force_input_port());
-
 
   // Create the PID controller for the base.
   const Eigen::VectorXd Kp_base = Eigen::VectorXd::Ones(2) * 10.0;
@@ -315,8 +296,8 @@ void DoMain() {
 
   // Select plant states and feed into PID controller.
   Eigen::MatrixXd feedback_base_selector = Eigen::MatrixXd::Zero(2 * 2, Q + V);
-  feedback_base_selector.topLeftCorner(2,2) = Eigen::MatrixXd::Identity(2,2);
-  feedback_base_selector.block<2,2>(2, Q) = Eigen::MatrixXd::Identity(2,2);
+  feedback_base_selector.topLeftCorner(2, 2) = Eigen::MatrixXd::Identity(2, 2);
+  feedback_base_selector.block<2, 2>(2, Q) = Eigen::MatrixXd::Identity(2, 2);
   drake::log()->info(feedback_base_selector);
   systems::MatrixGain<double>& select_PID_states =
       *builder.AddSystem<systems::MatrixGain<double>>(feedback_base_selector);
@@ -338,12 +319,12 @@ void DoMain() {
                   plant.get_actuation_input_port());
 
   // Set zero to plant actuation, we are using generalized actuation instead.
-//  auto zero_actuation =
-//      builder.AddSystem<systems::ConstantVectorSource<double>>(
-//          VectorX<double>::Zero(plant.num_actuators()));
-//  zero_actuation->set_name("zero_actuation");
-//  builder.Connect(zero_actuation->get_output_port(),
-//                  plant.get_actuation_input_port());
+  //  auto zero_actuation =
+  //      builder.AddSystem<systems::ConstantVectorSource<double>>(
+  //          VectorX<double>::Zero(plant.num_actuators()));
+  //  zero_actuation->set_name("zero_actuation");
+  //  builder.Connect(zero_actuation->get_output_port(),
+  //                  plant.get_actuation_input_port());
 
   // Connect plant with scene_graph to get collision information.
   DRAKE_DEMAND(!!plant.get_source_id());
