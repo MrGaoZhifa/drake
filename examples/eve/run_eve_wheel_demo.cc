@@ -69,12 +69,6 @@ DEFINE_double(inclined_plane_coef_kinetic_friction, 0.3,
               "Inclined plane's coefficient of kinetic friction (no units).  "
               "When time_step > 0, this value is ignored.  Only the "
               "coefficient of static friction is used in fixed-time step.");
-DEFINE_double(bodyB_coef_static_friction, 0.3,
-              "Body B's coefficient of static friction (no units).");
-DEFINE_double(bodyB_coef_kinetic_friction, 0.3,
-              "Body B's coefficient of kinetic friction (no units).  "
-              "When time_step > 0, this value is ignored.  Only the "
-              "coefficient of static friction is used in fixed-time step.");
 DEFINE_bool(is_inclined_plane_half_space, true,
             "Is inclined plane a half-space (true) or box (false).");
 DEFINE_double(init_height, 0.3,
@@ -191,9 +185,15 @@ void DoMain() {
   const int Q = plant.num_positions();
   const int V = plant.num_velocities();
   const int U = fake_plant.num_actuators();
-  const Eigen::VectorXd Kp_ = Eigen::VectorXd::Ones(U) * 10.0;
-  const Eigen::VectorXd Ki_ = Eigen::VectorXd::Ones(U) * 0.0;
-  const Eigen::VectorXd Kd_ = Eigen::VectorXd::Ones(U) * 1.0;
+  Eigen::VectorXd Kp_ = Eigen::VectorXd::Ones(U) * 10.0;
+  Eigen::VectorXd Ki_ = Eigen::VectorXd::Ones(U) * 0.0;
+  Eigen::VectorXd Kd_ = Eigen::VectorXd::Ones(U) * 1.0;
+  // Cancel the PID for wheel to purely apply torque.
+  Kp_(fake_plant.GetJointByName("j_r_wheel_y").velocity_start()) = 0.0;
+  Kp_(fake_plant.GetJointByName("j_l_wheel_y").velocity_start()) = 0.0;
+  Kd_(fake_plant.GetJointByName("j_r_wheel_y").velocity_start()) = 0.0;
+  Kd_(fake_plant.GetJointByName("j_l_wheel_y").velocity_start()) = 0.0;
+
   auto feed_forward_controller =
       builder
           .AddSystem<systems::controllers::InverseDynamicsController<double>>(
@@ -288,11 +288,12 @@ void DoMain() {
 //                  plant.get_actuation_input_port());
 
   // Set zero to plant actuation, we are using generalized actuation instead.
-    auto zero_actuation =
-        builder.AddSystem<systems::ConstantVectorSource<double>>(
-            VectorX<double>::Zero(plant.num_actuators()));
-    builder.Connect(zero_actuation->get_output_port(),
-                    plant.get_actuation_input_port());
+  Eigen::VectorXd wheel_torque = Eigen::VectorXd::Zero(plant.num_actuators());
+  wheel_torque(6) = 10; // Left wheel joint, index hard code first.
+  wheel_torque(7) = 10; // Right wheel joint, index hard code first.
+  auto zero_actuation = builder.AddSystem<systems::ConstantVectorSource<double>>(
+      wheel_torque);
+  builder.Connect(zero_actuation->get_output_port(), plant.get_actuation_input_port());
 
   // Connect plant with scene_graph to get collision information.
   DRAKE_DEMAND(!!plant.get_source_id());

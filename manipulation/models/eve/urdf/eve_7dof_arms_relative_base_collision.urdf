@@ -233,21 +233,21 @@
   </link>
 
 
-  <joint name="j_l_wheel_y" type="fixed">
+  <joint name="j_l_wheel_y" type="revolute">
     <origin xyz="0.142 0.26983 0.019" rpy="0.0 0.0 0.0"/>
     <parent link="base"/>
     <child link="l_wheel"/>
     <axis xyz="0.0 1.0 0.0"/>
     <limit lower="-1.0E16" upper="1.0E16" effort="-1.0" velocity="1.0"/>
   </joint>
-<!--  <transmission name="j_l_wheel_y_trans">-->
-<!--    <type>SimpleTransmission</type>-->
-<!--    <joint name="j_l_wheel_y">-->
-<!--      <hardwareInterface>EffortJointInterface</hardwareInterface>-->
-<!--    </joint>-->
-<!--    <actuator name="j_l_wheel_y_actuator">-->
-<!--    </actuator>-->
-<!--  </transmission>-->
+  <transmission name="j_l_wheel_y_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_l_wheel_y">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_l_wheel_y_actuator">
+    </actuator>
+  </transmission>
   <link name="l_wheel">
     <inertial>
       <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
@@ -269,21 +269,21 @@
       </geometry>
     </collision>
   </link>
-  <joint name="j_r_wheel_y" type="fixed">
+  <joint name="j_r_wheel_y" type="revolute">
     <origin xyz="0.142 -0.26983 0.019" rpy="0.0 0.0 0.0"/>
     <parent link="base"/>
     <child link="r_wheel"/>
     <axis xyz="0.0 1.0 0.0"/>
     <limit lower="-1.0E16" upper="1.0E16" effort="-1.0" velocity="1.0"/>
   </joint>
-<!--  <transmission name="j_r_wheel_y_trans">-->
-<!--    <type>SimpleTransmission</type>-->
-<!--    <joint name="j_r_wheel_y">-->
-<!--      <hardwareInterface>EffortJointInterface</hardwareInterface>-->
-<!--    </joint>-->
-<!--    <actuator name="j_r_wheel_y_actuator">-->
-<!--    </actuator>-->
-<!--  </transmission>-->
+  <transmission name="j_r_wheel_y_trans">
+    <type>SimpleTransmission</type>
+    <joint name="j_r_wheel_y">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="j_r_wheel_y_actuator">
+    </actuator>
+  </transmission>
   <link name="r_wheel">
     <inertial>
       <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
