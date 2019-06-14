@@ -51,9 +51,6 @@ DEFINE_bool(use_right_hand, true,
 DEFINE_double(max_time_step, 1.0e-3,
               "Simulation time step used for integrator.");
 
-DEFINE_bool(add_gravity, false,
-            "Indicator for whether terrestrial gravity"
-            " (9.81 m/s²) is included or not.");
 DEFINE_double(gravity, 9.8, "Value of gravity in the direction of -z.");
 
 DEFINE_double(target_realtime_rate, 1,
@@ -107,46 +104,20 @@ void DoMain() {
 
   const std::string full_name = FindResourceOrThrow(
       "drake/manipulation/models/eve/"
-      "sdf/eve_7dof_arms_relative_base_no_collision.sdf");
-  //      "sdf/eve_2dof_base_no_collision.sdf");
-  //      "urdf/eve_7dof_arms_relative_base_no_collision.urdf");
+      "urdf/eve_7dof_arms_relative_base_collision.urdf");
 
   ModelInstanceIndex plant_model_instance_index =
       parser.AddModelFromFile(full_name);
   (void)plant_model_instance_index;
 
   // Add half space plane and gravity.
-  //  const drake::multibody::CoulombFriction<double>
-  //  coef_friction_inclined_plane(
-  //      FLAGS_inclined_plane_coef_static_friction,
-  //      FLAGS_inclined_plane_coef_kinetic_friction);
-  //  multibody::benchmarks::inclined_plane::AddInclinedPlaneAndGravityToPlant(
-  //      FLAGS_gravity, 0.0, drake::nullopt, coef_friction_inclined_plane,
-  //      &plant);
-  const Vector3<double> gravity_vector_W(0, 0, -FLAGS_gravity);
-  plant.mutable_gravity_field().set_gravity_vector(gravity_vector_W);
-
-  // Connect the plant to the world frame with 1 prismatic and 1 revolute joint.
-  const multibody::Body<double>& eve_root = plant.GetBodyByName("base");
-  const multibody::RigidBody<double>& adapter_body = plant.AddRigidBody(
-      "adapter", plant_model_instance_index,
-      multibody::SpatialInertia<double>::MakeFromCentralInertia(
-          1e-8, Eigen::Vector3d::Ones() * 1e-8,
-          multibody::RotationalInertia<double>(1e-8, 1e-8, 1e-8)));
-
-  const multibody::PrismaticJoint<double>& pris_x =
-      plant.AddJoint<multibody::PrismaticJoint>(
-          "pris_x", plant.world_body(), nullopt, adapter_body, nullopt,
-          Eigen::Vector3d::UnitX(), -1.0, 1.0, 3);
-  const multibody::RevoluteJoint<double>& revolute_z =
-      plant.AddJoint<multibody::RevoluteJoint>("revolute_z", adapter_body,
-                                               nullopt, eve_root, nullopt,
-                                               Eigen::Vector3d::UnitZ());
-  //  plant.AddJoint<multibody::PrismaticJoint>(
-  //      "pris_y", adapter_body, nullopt, joint_eve_root, nullopt,
-  //      Eigen::Vector3d::UnitY(), -1.0, 1.0, 3);
-  plant.AddJointActuator("a_pris_x", pris_x);
-  plant.AddJointActuator("a_revolute_z", revolute_z);
+  const drake::multibody::CoulombFriction<double>
+    coef_friction_inclined_plane(
+        FLAGS_inclined_plane_coef_static_friction,
+        FLAGS_inclined_plane_coef_kinetic_friction);
+  multibody::benchmarks::inclined_plane::AddInclinedPlaneAndGravityToPlant(
+        FLAGS_gravity, 0.0, drake::nullopt, coef_friction_inclined_plane,
+        &plant);
 
   // Now the plant is complete.
   plant.Finalize();
@@ -158,7 +129,7 @@ void DoMain() {
 
   const std::string fake_full_name = FindResourceOrThrow(
       "drake/manipulation/models/eve/"
-      "sdf/eve_7dof_arms_relative_base_no_collision.sdf");
+      "urdf/eve_7dof_arms_relative_base_collision.urdf");
 
   ModelInstanceIndex fake_plant_model_instance_index =
       fake_parser.AddModelFromFile(fake_full_name);
@@ -224,7 +195,7 @@ void DoMain() {
   const int Q = plant.num_positions();
   const int V = plant.num_velocities();
   const int U = fake_plant.num_actuators();
-  const Eigen::VectorXd Kp_ = Eigen::VectorXd::Ones(U) * 5.0;
+  const Eigen::VectorXd Kp_ = Eigen::VectorXd::Ones(U) * 0.0;
   const Eigen::VectorXd Ki_ = Eigen::VectorXd::Ones(U) * 0.0;
   const Eigen::VectorXd Kd_ = Eigen::VectorXd::Ones(U) * 0.0;
   auto feed_forward_controller =
@@ -245,7 +216,9 @@ void DoMain() {
   // Select plant states and feed into controller with fake_plant.
   Eigen::MatrixXd feedback_joints_selector =
       Eigen::MatrixXd::Zero(2 * U, Q + V);
-  for (multibody::JointIndex j(0); j < fake_plant.num_actuators(); ++j) {
+  for (multibody::JointIndex j(0); j < plant.num_joints(); ++j) {
+    if (plant.get_joint(j).name() == "j_l_wheel_y" || plant.get_joint(j).name() == "j_r_wheel_y")
+      continue;
     feedback_joints_selector(fake_plant.get_joint(j).position_start(),
                              plant.get_joint(j).position_start()) = 1;
     feedback_joints_selector(
@@ -279,52 +252,51 @@ void DoMain() {
   builder.Connect(select_generalized_actuation_states->get_output_port(),
                   plant.get_applied_generalized_force_input_port());
 
-  // Create the PID controller for the base.
-  const Eigen::VectorXd Kp_base = Eigen::VectorXd::Ones(2) * 10.0;
-  const Eigen::VectorXd Ki_base = Eigen::VectorXd::Ones(2) * 0.0;
-  const Eigen::VectorXd Kd_base = Eigen::VectorXd::Ones(2) * 0.0;
-  systems::controllers::PidController<double>* pid_controller =
-      builder.AddSystem<systems::controllers::PidController<double>>(
-          Kp_base, Ki_base, Kd_base);
-
-  // Set desired position [q,v]' for PID as feedback reference.
-  auto desired_base_source =
-      builder.AddSystem<systems::ConstantVectorSource<double>>(
-          Eigen::VectorXd::Zero(2 * 2));
-  builder.Connect(desired_base_source->get_output_port(),
-                  pid_controller->get_input_port_desired_state());
-
-  // Select plant states and feed into PID controller.
-  Eigen::MatrixXd feedback_base_selector = Eigen::MatrixXd::Zero(2 * 2, Q + V);
-  feedback_base_selector.topLeftCorner(2, 2) = Eigen::MatrixXd::Identity(2, 2);
-  feedback_base_selector.block<2, 2>(2, Q) = Eigen::MatrixXd::Identity(2, 2);
-  drake::log()->info(feedback_base_selector);
-  systems::MatrixGain<double>& select_PID_states =
-      *builder.AddSystem<systems::MatrixGain<double>>(feedback_base_selector);
-  builder.Connect(plant.get_state_output_port(),
-                  select_PID_states.get_input_port());
-  builder.Connect(select_PID_states.get_output_port(),
-                  pid_controller->get_input_port_estimated_state());
-
-  // Select control signal and feed into plant.
-  Eigen::MatrixXd actuation_selector =
-      Eigen::MatrixXd::Zero(plant.num_actuators(), 2);
-  actuation_selector.bottomRightCorner(2, 2) = Eigen::MatrixXd::Identity(2, 2);
-  drake::log()->info(actuation_selector);
-  systems::MatrixGain<double>* select_actuation_states =
-      builder.AddSystem<systems::MatrixGain<double>>(actuation_selector);
-  builder.Connect(pid_controller->get_output_port_control(),
-                  select_actuation_states->get_input_port());
-  builder.Connect(select_actuation_states->get_output_port(),
-                  plant.get_actuation_input_port());
+//  // Create the PID controller for the base.
+//  const Eigen::VectorXd Kp_base = Eigen::VectorXd::Ones(2) * 10.0;
+//  const Eigen::VectorXd Ki_base = Eigen::VectorXd::Ones(2) * 0.0;
+//  const Eigen::VectorXd Kd_base = Eigen::VectorXd::Ones(2) * 0.0;
+//  systems::controllers::PidController<double>* pid_controller =
+//      builder.AddSystem<systems::controllers::PidController<double>>(
+//          Kp_base, Ki_base, Kd_base);
+//
+//  // Set desired position [q,v]' for PID as feedback reference.
+//  auto desired_base_source =
+//      builder.AddSystem<systems::ConstantVectorSource<double>>(
+//          Eigen::VectorXd::Zero(2 * 2));
+//  builder.Connect(desired_base_source->get_output_port(),
+//                  pid_controller->get_input_port_desired_state());
+//
+//  // Select plant states and feed into PID controller.
+//  Eigen::MatrixXd feedback_base_selector = Eigen::MatrixXd::Zero(2 * 2, Q + V);
+//  feedback_base_selector.topLeftCorner(2, 2) = Eigen::MatrixXd::Identity(2, 2);
+//  feedback_base_selector.block<2, 2>(2, Q) = Eigen::MatrixXd::Identity(2, 2);
+//  drake::log()->info(feedback_base_selector);
+//  systems::MatrixGain<double>& select_PID_states =
+//      *builder.AddSystem<systems::MatrixGain<double>>(feedback_base_selector);
+//  builder.Connect(plant.get_state_output_port(),
+//                  select_PID_states.get_input_port());
+//  builder.Connect(select_PID_states.get_output_port(),
+//                  pid_controller->get_input_port_estimated_state());
+//
+//  // Select control signal and feed into plant.
+//  Eigen::MatrixXd actuation_selector =
+//      Eigen::MatrixXd::Zero(plant.num_actuators(), 2);
+//  actuation_selector.bottomRightCorner(2, 2) = Eigen::MatrixXd::Identity(2, 2);
+//  drake::log()->info(actuation_selector);
+//  systems::MatrixGain<double>* select_actuation_states =
+//      builder.AddSystem<systems::MatrixGain<double>>(actuation_selector);
+//  builder.Connect(pid_controller->get_output_port_control(),
+//                  select_actuation_states->get_input_port());
+//  builder.Connect(select_actuation_states->get_output_port(),
+//                  plant.get_actuation_input_port());
 
   // Set zero to plant actuation, we are using generalized actuation instead.
-  //  auto zero_actuation =
-  //      builder.AddSystem<systems::ConstantVectorSource<double>>(
-  //          VectorX<double>::Zero(plant.num_actuators()));
-  //  zero_actuation->set_name("zero_actuation");
-  //  builder.Connect(zero_actuation->get_output_port(),
-  //                  plant.get_actuation_input_port());
+    auto zero_actuation =
+        builder.AddSystem<systems::ConstantVectorSource<double>>(
+            VectorX<double>::Zero(plant.num_actuators()));
+    builder.Connect(zero_actuation->get_output_port(),
+                    plant.get_actuation_input_port());
 
   // Connect plant with scene_graph to get collision information.
   DRAKE_DEMAND(!!plant.get_source_id());
@@ -346,14 +318,14 @@ void DoMain() {
       diagram->GetMutableSubsystemContext(plant, diagram_context.get());
 
   // Set the robot COM position, make sure the robot base is off the ground.
-  //  drake::VectorX<double> positions =
-  //      plant.GetPositions(plant_context, plant_model_instance_index);
-  //  positions[0] = 0.4;
-  //  plant.SetPositions(&plant_context, positions);
+    drake::VectorX<double> positions =
+        plant.GetPositions(plant_context, plant_model_instance_index);
+    positions[6] = 0.6;
+    plant.SetPositions(&plant_context, positions);
 
   // Set robot init velocity for every joint.
   drake::VectorX<double> velocities =
-      Eigen::VectorXd::Ones(plant.num_velocities()) * -0.1;
+      Eigen::VectorXd::Ones(plant.num_velocities()) * -0.0;
   plant.SetVelocities(&plant_context, velocities);
 
   // Set up simulator.
