@@ -45,9 +45,6 @@ DEFINE_double(constant_pos, 0.0,
 DEFINE_double(simulation_time, 3,
               "Desired duration of the simulation in seconds");
 
-DEFINE_bool(use_right_hand, true,
-            "Which hand to model: true for right hand or false for left hand");
-
 DEFINE_double(max_time_step, 1.0e-3,
               "Simulation time step used for integrator.");
 
@@ -80,9 +77,8 @@ DEFINE_double(bodyB_coef_kinetic_friction, 0.3,
               "coefficient of static friction is used in fixed-time step.");
 DEFINE_bool(is_inclined_plane_half_space, true,
             "Is inclined plane a half-space (true) or box (false).");
-DEFINE_string(bodyB_type, "sphere",
-              "Valid body types are "
-              "'sphere', 'block', or 'block_with_4Spheres'");
+DEFINE_double(init_height, 0.3,
+              "Initial height for base.");
 
 void DoMain() {
   DRAKE_DEMAND(FLAGS_simulation_time > 0);
@@ -195,9 +191,9 @@ void DoMain() {
   const int Q = plant.num_positions();
   const int V = plant.num_velocities();
   const int U = fake_plant.num_actuators();
-  const Eigen::VectorXd Kp_ = Eigen::VectorXd::Ones(U) * 0.0;
+  const Eigen::VectorXd Kp_ = Eigen::VectorXd::Ones(U) * 10.0;
   const Eigen::VectorXd Ki_ = Eigen::VectorXd::Ones(U) * 0.0;
-  const Eigen::VectorXd Kd_ = Eigen::VectorXd::Ones(U) * 0.0;
+  const Eigen::VectorXd Kd_ = Eigen::VectorXd::Ones(U) * 1.0;
   auto feed_forward_controller =
       builder
           .AddSystem<systems::controllers::InverseDynamicsController<double>>(
@@ -320,7 +316,7 @@ void DoMain() {
   // Set the robot COM position, make sure the robot base is off the ground.
     drake::VectorX<double> positions =
         plant.GetPositions(plant_context, plant_model_instance_index);
-    positions[6] = 0.6;
+    positions[6] = FLAGS_init_height;
     plant.SetPositions(&plant_context, positions);
 
   // Set robot init velocity for every joint.
