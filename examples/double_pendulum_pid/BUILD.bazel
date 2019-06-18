@@ -1,0 +1,31 @@
+load(
+    "@drake//tools/skylark:drake_cc.bzl",
+    "drake_cc_binary",
+)
+load("//tools/install:install_data.bzl", "install_data")
+
+drake_cc_binary(
+    name = "run_double_pendulum_pid_exe",
+    srcs = [
+        "run_double_pendulum_pid.cc",
+    ],
+    data = [
+        ":models",
+        "//tools:drake_visualizer",
+    ],
+    deps = [
+        "//common:essential",
+        "//common:find_resource",
+        "//common:text_logging_gflags",
+        "//geometry:geometry_visualization",
+        "//lcm",
+        "//multibody/parsing",
+        "//multibody/plant",
+        "//systems/analysis",
+        "//systems/controllers",
+        "//systems/framework",
+        "@sdformat",
+    ],
+)
+
+install_data()
