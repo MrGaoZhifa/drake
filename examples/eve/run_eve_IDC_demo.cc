@@ -1,8 +1,8 @@
 /// @file
 ///
-/// This demo sets up a humanoid robot eve from halodi robotics. The file shows
-/// how to use inverse dynamics controller and pid controller to balance the
-/// robot.
+/// This file create a eve plant for simulation and another one for control.
+/// The simulation plant if connected to ground with a prismatic and a rovolute
+/// joint, the control plant is welded to ground.
 
 #include <gflags/gflags.h>
 

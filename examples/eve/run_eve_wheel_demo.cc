@@ -23,6 +23,8 @@
 #include "drake/multibody/tree/revolute_joint.h"
 #include "drake/multibody/tree/uniform_gravity_field_element.h"
 #include "drake/multibody/tree/weld_joint.h"
+#include "drake/multibody/plant/contact_results_to_lcm.h"
+#include <drake/multibody/plant/externally_applied_spatial_force.h>
 #include "drake/systems/analysis/simulator.h"
 #include "drake/systems/controllers/inverse_dynamics_controller.h"
 #include "drake/systems/framework/diagram.h"
@@ -71,7 +73,109 @@ DEFINE_double(inclined_plane_coef_kinetic_friction, 0.3,
               "coefficient of static friction is used in fixed-time step.");
 DEFINE_bool(is_inclined_plane_half_space, true,
             "Is inclined plane a half-space (true) or box (false).");
-DEFINE_double(init_height, 0.3, "Initial height for base.");
+DEFINE_double(init_height, 0.2, "Initial height for base.");
+
+class WheelControllerLogic : public systems::LeafSystem<double> {
+ public:
+  WheelControllerLogic(MultibodyPlant<double>& plant,
+                  ModelInstanceIndex plant_instance)
+      : plant_(plant), plant_instance_(plant_instance) {
+    this->DeclareVectorInputPort(
+        "input1", systems::BasicVector<double>(1));
+    this->DeclareVectorOutputPort(
+        "output1", systems::BasicVector<double>(plant.num_actuators()),
+        &WheelControllerLogic::remap_output);
+  }
+
+  void remap_output(const systems::Context<double>& context,
+                    systems::BasicVector<double>* output_vector) const {
+    auto output_value = output_vector->get_mutable_value();
+    auto input_value = this->EvalVectorInput(context, 0)->get_value();
+    (void) input_value;
+    output_value.setZero();
+    output_value[6] = 10-input_value[0];
+    output_value[7] = 10+input_value[0];
+    drake::log()->info(input_value.transpose());
+    drake::log()->info(output_value.transpose());
+    drake::log()->info("\n");
+
+//    plant_.SetVelocitiesInArray(plant_instance_, input_value, &output_value);
+  }
+
+ private:
+  MultibodyPlant<double>& plant_;
+  ModelInstanceIndex plant_instance_;
+};
+
+class WheelStateSelector : public systems::LeafSystem<double> {
+ public:
+  WheelStateSelector(MultibodyPlant<double>& plant,
+                  ModelInstanceIndex plant_instance)
+      : plant_(plant), plant_instance_(plant_instance) {
+    this->DeclareVectorInputPort(
+        "input1", systems::BasicVector<double>(plant.num_multibody_states()));
+    this->DeclareVectorOutputPort(
+        "output1", systems::BasicVector<double>(2),
+        &WheelStateSelector::remap_output);
+  }
+
+  void remap_output(const systems::Context<double>& context,
+                    systems::BasicVector<double>* output_vector) const {
+    auto output_value = output_vector->get_mutable_value();
+    auto input_value = this->EvalVectorInput(context, 0)->get_value();
+//    (void) input_value;
+    drake::log()->info(output_value.transpose());
+//    output_value.setZero();
+    output_value[0] = input_value[5];
+    output_value[1] = input_value[34];
+//    plant_.SetVelocitiesInArray(plant_instance_, input_value, &output_value);
+  }
+
+ private:
+
+  MultibodyPlant<double>& plant_;
+  ModelInstanceIndex plant_instance_;
+};
+
+class WheelController : public systems::Diagram<double> {
+ public:
+  WheelController(MultibodyPlant<double>& plant,
+                  ModelInstanceIndex plant_instance)
+    : plant_(plant), plant_instance_(plant_instance) {
+    systems::DiagramBuilder<double> builder;
+
+    // Add wheel state selector.
+    const auto* const wss = builder.AddSystem<WheelStateSelector>(plant, plant_instance);
+
+    // Add PID controller.
+    const Eigen::VectorXd Kp = Eigen::VectorXd::Ones(1) * 8.0;
+    const Eigen::VectorXd Ki = Eigen::VectorXd::Ones(1) * 0.0;
+    const Eigen::VectorXd Kd = Eigen::VectorXd::Ones(1) * 0.0;
+    const auto* const wc = builder.AddSystem<systems::controllers::PidController<double>>(Kp, Ki, Kd);
+    // Set PID desired states.
+    auto desired_base_source =
+          builder.AddSystem<systems::ConstantVectorSource<double>>(
+              Eigen::VectorXd::Zero(2));
+    builder.Connect(desired_base_source->get_output_port(), wc->get_input_port_desired_state());
+
+    // Add wheel control logic.
+    const auto* const wcl = builder.AddSystem<WheelControllerLogic>(plant, plant_instance);
+
+    // Expose Input and Output port.
+    builder.ExportInput(wss->get_input_port(0), "wheel_state");
+    builder.ExportOutput(wcl->get_output_port(0), "wheel_control");
+
+    // Connect internal ports
+    builder.Connect(wss->get_output_port(0), wc->get_input_port_estimated_state());
+    builder.Connect(wc->get_output_port_control(), wcl->get_input_port(0));
+
+    builder.BuildInto(this);
+  }
+
+ private:
+  MultibodyPlant<double>& plant_;
+  ModelInstanceIndex plant_instance_;
+};
 
 void DoMain() {
   DRAKE_DEMAND(FLAGS_simulation_time > 0);
@@ -108,6 +212,8 @@ void DoMain() {
 
   // Now the plant is complete.
   plant.Finalize();
+  // Publish contact results for visualization.
+  ConnectContactResultsToDrakeVisualizer(&builder, plant);
 
   // Create fake model for InverseDynamicsController
   MultibodyPlant<double> fake_plant(FLAGS_max_time_step);
@@ -286,14 +392,19 @@ void DoMain() {
   //  builder.Connect(select_actuation_states->get_output_port(),
   //                  plant.get_actuation_input_port());
 
-  // Set zero to plant actuation, we are using generalized actuation instead.
-  Eigen::VectorXd wheel_torque = Eigen::VectorXd::Zero(plant.num_actuators());
-  wheel_torque(6) = 8;  // Left wheel joint, index hard code first.
-  wheel_torque(7) = 8;  // Right wheel joint, index hard code first.
-  auto zero_actuation =
-      builder.AddSystem<systems::ConstantVectorSource<double>>(wheel_torque);
-  builder.Connect(zero_actuation->get_output_port(),
-                  plant.get_actuation_input_port());
+//  // Set constant wheel torque to plant actuation.
+//  Eigen::VectorXd wheel_torque = Eigen::VectorXd::Zero(plant.num_actuators());
+//  wheel_torque(6) = 8;  // Left wheel joint, index hard code first.
+//  wheel_torque(7) = 8;  // Right wheel joint, index hard code first.
+//  auto zero_actuation =
+//      builder.AddSystem<systems::ConstantVectorSource<double>>(wheel_torque);
+//  builder.Connect(zero_actuation->get_output_port(),
+//                  plant.get_actuation_input_port());
+
+  // Create the WheelController.
+  auto wc = builder.AddSystem<WheelController>(plant, plant_model_instance_index);
+  builder.Connect(plant.get_state_output_port(), wc->get_input_port(0));
+  builder.Connect(wc->get_output_port(0), plant.get_actuation_input_port());
 
   // Connect plant with scene_graph to get collision information.
   DRAKE_DEMAND(!!plant.get_source_id());
