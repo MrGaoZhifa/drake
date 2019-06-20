@@ -1358,7 +1358,7 @@ void MultibodyPlant<T>::DoCalcTimeDerivatives(
     systems::ContinuousState<T>* derivatives) const {
   // No derivatives to compute if state is discrete.
   if (is_discrete()) return;
-  drake::log()->info("This is a continuous system.");
+//  drake::log()->info("This is a continuous system.");
   const auto x =
       dynamic_cast<const systems::BasicVector<T>&>(
           context.get_continuous_state_vector()).get_value();

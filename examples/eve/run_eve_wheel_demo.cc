@@ -178,6 +178,7 @@ class WheelController : public systems::Diagram<double> {
 };
 
 void DoMain() {
+  logging::HandleSpdlogGflags();
   DRAKE_DEMAND(FLAGS_simulation_time > 0);
 
   systems::DiagramBuilder<double> builder;
