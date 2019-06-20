@@ -76,7 +76,9 @@ void DoMain() {
 
   // Set nominal state to the upright fixed point.
   Eigen::VectorXd x0 = Eigen::VectorXd::Zero(4);
-//  cp_context->SetDiscreteState(x0);
+  x0[0] = 1;
+  x0[1] = M_PI;
+  cp_context->SetDiscreteState(x0);
 
   // Setup LQR Cost matrices (penalize position error 10x more than velocity
   // to roughly address difference in units, using sqrt(g/l) as the time
@@ -101,12 +103,12 @@ void DoMain() {
 //    DRAKE_THROW_UNLESS(static_cast<bool>(periodic_data));
 //    time_period = periodic_data->period_sec();
 //  }
-//
 //  drake::log()->info(std::to_string(time_period));
+
 //  auto linear_system = systems::Linearize(
 //      *cp, *cp_context, systems::InputPortIndex{CartPole_actuation_port},
 //      systems::OutputPortSelection::kNoOutput);
-//
+
 //  drake::log()->info(std::to_string(time_period));
 //  systems::controllers::LinearQuadraticRegulatorResult lqr_result =
 //      (time_period == 0.0)
@@ -117,15 +119,21 @@ void DoMain() {
 //  drake::log()->info(std::to_string(time_period));
 //  drake::log()->info(linear_system->A());
 //  drake::log()->info(linear_system->B());
-////  Eigen::MatrixXd K = Eigen::MatrixXd::Identity(2,4);
+
+//  Eigen::MatrixXd K(4,4);
+//  K << 26551, 992, 34749, 1571,
+//         992,7002,  1267,  266,
+//       34749,1267, 92373, 4214,
+//        1571, 266,  4214,  464;
+//
 //
 //  const auto* const lqr =
 //      builder.AddSystem(std::make_unique<systems::AffineSystem<double>>(Eigen::Matrix<double, 0, 0>::Zero(),   // A
 //                                                       Eigen::MatrixXd::Zero(0, 4),  // B
 //                                                       Eigen::Matrix<double, 0, 1>::Zero(),   // xDot0
-//                                                       Eigen::MatrixXd::Zero(2, 0),  // C
-//                                                       -lqr_result.K,                         // D
-//                                                       u0 + lqr_result.K * x0,                // y0
+//                                                       Eigen::MatrixXd::Zero(4, 0),  // C
+//                                                       -K,                         // D
+//                                                       u0 + K * x0,                // y0
 //                                                                        time_period));
 
   builder.Connect(cp->get_state_output_port(),

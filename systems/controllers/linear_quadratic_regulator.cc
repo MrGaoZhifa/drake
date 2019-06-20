@@ -133,6 +133,8 @@ std::unique_ptr<systems::AffineSystem<double>> LinearQuadraticRegulator(
                                                  linear_system->B(), Q, R);
 
   drake::log()->info(linear_system->A());
+  drake::log()->info(linear_system->B());
+  drake::log()->info(lqr_result.K);
 
   const Eigen::VectorXd& x0 =
       (linear_system->time_period() == 0.0)
@@ -141,8 +143,6 @@ std::unique_ptr<systems::AffineSystem<double>> LinearQuadraticRegulator(
 
   const auto& u0 = system.get_input_port(input_port_index).Eval(context);
 
-  drake::log()->info(x0.transpose());
-  drake::log()->info(u0.transpose());
 
   // Return the affine controller: u = u0 - K(x-x0).
   return std::make_unique<systems::AffineSystem<double>>(
