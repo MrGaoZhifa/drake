@@ -59,12 +59,20 @@ LinearQuadraticRegulatorResult DiscreteTimeLinearQuadraticRegulator(
   DRAKE_DEMAND(is_approx_equal_abstol(R, R.transpose(), 1e-10));
 
   LinearQuadraticRegulatorResult ret;
+  drake::log()->info("before compute S.");
+  drake::log()->info(A);
+  drake::log()->info(B);
+  drake::log()->info(Q);
+  drake::log()->info(R);
 
   ret.S = math::DiscreteAlgebraicRiccatiEquation(A, B, Q, R);
+  drake::log()->info("after compute S.");
 
   Eigen::MatrixXd tmp = B.transpose() * ret.S * B + R;
-  ret.K = tmp.llt().solve(B.transpose() * ret.S * A);
+  drake::log()->info("before compute K.");
 
+  ret.K = tmp.llt().solve(B.transpose() * ret.S * A);
+  drake::log()->info("after compute K.");
   return ret;
 }
 
@@ -107,7 +115,7 @@ std::unique_ptr<systems::AffineSystem<double>> LinearQuadraticRegulator(
   // continuous-time OR (only simple) discrete-time dyanmics.
 
   // TODO(russt): Confirm behavior if Q is not PSD.
-
+  drake::log()->info("Create the LQR controller.");
   // Use specified input and no outputs (the output dynamics are irrelevant for
   // LQR design).
   auto linear_system = Linearize(
@@ -124,12 +132,17 @@ std::unique_ptr<systems::AffineSystem<double>> LinearQuadraticRegulator(
           : DiscreteTimeLinearQuadraticRegulator(linear_system->A(),
                                                  linear_system->B(), Q, R);
 
+  drake::log()->info(linear_system->A());
+
   const Eigen::VectorXd& x0 =
       (linear_system->time_period() == 0.0)
           ? context.get_continuous_state_vector().CopyToVector()
           : context.get_discrete_state(0).CopyToVector();
 
   const auto& u0 = system.get_input_port(input_port_index).Eval(context);
+
+  drake::log()->info(x0.transpose());
+  drake::log()->info(u0.transpose());
 
   // Return the affine controller: u = u0 - K(x-x0).
   return std::make_unique<systems::AffineSystem<double>>(
