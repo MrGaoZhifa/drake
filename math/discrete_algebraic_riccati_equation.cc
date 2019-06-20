@@ -3,6 +3,7 @@
 #include "drake/common/drake_assert.h"
 #include "drake/common/drake_throw.h"
 #include "drake/common/is_approx_equal_abstol.h"
+#include "drake/common/text_logging.h"
 
 namespace drake {
 namespace math {
@@ -316,6 +317,7 @@ void reorder_eigen(Eigen::Ref<Eigen::MatrixXd> S, Eigen::Ref<Eigen::MatrixXd> T,
     // Update q.
     int q_block_size = 0;
     while (q < n2) {
+//      drake::log()->info(std::to_string(q));
       if (q == n2 - 1 || fabs(S(q + 1, q)) < eps) {  // block size = 1
         if (fabs(T(q, q)) > eps && fabs(S(q, q)) <= fabs(T(q, q))) {
           q_block_size = 1;
@@ -394,6 +396,8 @@ Eigen::MatrixXd DiscreteAlgebraicRiccatiEquation(
   check_stabilizable(A, B);
   check_detectable(A, Q);
 
+  drake::log()->info("after check detectability and stability.");
+
   Eigen::MatrixXd M(2 * n, 2 * n), L(2 * n, 2 * n);
   M << A, Eigen::MatrixXd::Zero(n, n), -Q, Eigen::MatrixXd::Identity(n, n);
   L << Eigen::MatrixXd::Identity(n, n), B * R.inverse() * B.transpose(),
@@ -408,11 +412,13 @@ Eigen::MatrixXd DiscreteAlgebraicRiccatiEquation(
                      // are adjoints of Q and Z above)
   Eigen::MatrixXd S = qz.matrixS(), T = qz.matrixT(),
                   Z = qz.matrixZ().adjoint();
+  drake::log()->info("after QZ decompose.");
 
   // Reorder the generalized eigenvalues of (S,T).
   Eigen::MatrixXd Z2 = Eigen::MatrixXd::Identity(2 * n, 2 * n);
   reorder_eigen(S, T, Z2);
   Z = (Z * Z2).eval();
+  drake::log()->info("after reorder the eigen value.");
 
   // The first n columns of Z is ( U1 ) .
   //                             ( U2 )
