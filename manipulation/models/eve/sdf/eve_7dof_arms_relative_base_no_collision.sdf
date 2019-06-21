@@ -31,6 +31,9 @@
             <uri>model://eve/meshes/wheel.obj</uri>
           </mesh>
         </geometry>
+        <material>
+          <diffuse>0.380 0.380 0.390 1</diffuse>
+        </material>
       </visual>
       <visual name='base_fixed_joint_lump__r_wheel_visual_2'>
         <pose frame=''>0.142 -0.26983 0.019 1.5708 -0 1.5708</pose>
@@ -40,6 +43,9 @@
             <uri>model://eve/meshes/wheel.obj</uri>
           </mesh>
         </geometry>
+        <material>
+          <diffuse>0.380 0.380 0.390 1</diffuse>
+        </material>
       </visual>
     </link>
     <link name='ankle_y_link'>
@@ -106,6 +112,9 @@
             <uri>model://eve/meshes/shin.obj</uri>
           </mesh>
         </geometry>
+        <material>
+          <diffuse>0.662 0.713 0.819 1</diffuse>
+        </material>
       </visual>
     </link>
     <joint name='j_ankle_y' type='revolute'>
@@ -148,6 +157,9 @@
             <uri>model://eve/meshes/thigh.obj</uri>
           </mesh>
         </geometry>
+        <material>
+          <diffuse>0.662 0.713 0.819 1</diffuse>
+        </material>
       </visual>
     </link>
     <joint name='j_knee_y' type='revolute'>
@@ -190,6 +202,9 @@
             <uri>model://eve/meshes/hip.obj</uri>
           </mesh>
         </geometry>
+        <material>
+          <diffuse>0.662 0.713 0.819 1</diffuse>
+        </material>
       </visual>
     </link>
     <joint name='j_hip_y' type='revolute'>
@@ -232,6 +247,9 @@
             <uri>model://eve/meshes/abdomen.obj</uri>
           </mesh>
         </geometry>
+        <material>
+          <diffuse>0.921 0.921 0.980 1</diffuse>
+        </material>
       </visual>
     </link>
     <joint name='j_hip_x' type='revolute'>
@@ -274,6 +292,9 @@
             <uri>model://eve/meshes/7dof_torso.obj</uri>
           </mesh>
         </geometry>
+        <material>
+          <diffuse>0.341 0.337 0.921 1</diffuse>
+        </material>
       </visual>
       <gravity>1</gravity>
       <velocity_decay/>
@@ -379,6 +400,9 @@
             <uri>../meshes/7dof_scapula.obj</uri>
           </mesh>
         </geometry>
+        <material>
+          <diffuse>0.729 0.749 0.737 1</diffuse>
+        </material>
       </visual>
     </link>
     <joint name='j_l_shoulder_y' type='revolute'>
@@ -421,6 +445,9 @@
             <uri>../meshes/7dof_shoulder.obj</uri>
           </mesh>
         </geometry>
+        <material>
+          <diffuse>0.729 0.749 0.737 1</diffuse>
+        </material>
       </visual>
     </link>
     <joint name='j_l_shoulder_x' type='revolute'>
@@ -463,6 +490,9 @@
             <uri>../meshes/7dof_upper_arm.obj</uri>
           </mesh>
         </geometry>
+        <material>
+          <diffuse>0.662 0.713 0.819 1</diffuse>
+        </material>
       </visual>
     </link>
     <joint name='j_l_shoulder_z' type='revolute'>
@@ -505,6 +535,9 @@
             <uri>../meshes/7dof_elbow.obj</uri>
           </mesh>
         </geometry>
+        <material>
+          <diffuse>0.662 0.713 0.819 1</diffuse>
+        </material>
       </visual>
     </link>
     <joint name='j_l_elbow_y' type='revolute'>
@@ -547,6 +580,9 @@
             <uri>../meshes/7dof_forearm.obj</uri>
           </mesh>
         </geometry>
+        <material>
+          <diffuse>0.662 0.662 0.819 1</diffuse>
+        </material>
       </visual>
     </link>
     <joint name='j_l_elbow_z' type='revolute'>
@@ -589,6 +625,9 @@
             <uri>../meshes/7dof_wrist.obj</uri>
           </mesh>
         </geometry>
+        <material>
+          <diffuse>0.662 0.662 0.819 1</diffuse>
+        </material>
       </visual>
     </link>
     <joint name='j_l_wrist_y' type='revolute'>
@@ -631,6 +670,9 @@
             <uri>../meshes/7dof_palm.obj</uri>
           </mesh>
         </geometry>
+        <material>
+          <diffuse>0.662 0.662 0.819 1</diffuse>
+        </material>
       </visual>
     </link>
     <joint name='j_l_wrist_x' type='revolute'>
@@ -675,6 +717,9 @@
             <uri>../meshes/head.obj</uri>
           </mesh>
         </geometry>
+        <material>
+            <diffuse>0.886 0.956 0.972 1</diffuse>
+        </material>
       </visual>
       <gravity>1</gravity>
       <velocity_decay/>
@@ -739,6 +784,9 @@
             <uri>../meshes/7dof_scapula.obj</uri>
           </mesh>
         </geometry>
+        <material>
+          <diffuse>0.729 0.749 0.737 1</diffuse>
+        </material>
       </visual>
     </link>
     <joint name='j_r_shoulder_y' type='revolute'>
@@ -781,6 +829,9 @@
             <uri>../meshes/7dof_shoulder.obj</uri>
           </mesh>
         </geometry>
+        <material>
+          <diffuse>0.729 0.749 0.737 1</diffuse>
+        </material>
       </visual>
     </link>
     <joint name='j_r_shoulder_x' type='revolute'>
@@ -823,6 +874,9 @@
             <uri>../meshes/7dof_upper_arm.obj</uri>
           </mesh>
         </geometry>
+        <material>
+          <diffuse>0.662 0.713 0.819 1</diffuse>
+        </material>
       </visual>
     </link>
     <joint name='j_r_shoulder_z' type='revolute'>
@@ -865,6 +919,9 @@
             <uri>../meshes/7dof_elbow.obj</uri>
           </mesh>
         </geometry>
+        <material>
+          <diffuse>0.662 0.713 0.819 1</diffuse>
+        </material>
       </visual>
     </link>
     <joint name='j_r_elbow_y' type='revolute'>
@@ -907,6 +964,9 @@
             <uri>../meshes/7dof_forearm.obj</uri>
           </mesh>
         </geometry>
+        <material>
+          <diffuse>0.662 0.662 0.819 1</diffuse>
+        </material>
       </visual>
     </link>
     <joint name='j_r_elbow_z' type='revolute'>
@@ -949,6 +1009,9 @@
             <uri>../meshes/7dof_wrist.obj</uri>
           </mesh>
         </geometry>
+        <material>
+          <diffuse>0.662 0.662 0.819 1</diffuse>
+        </material>
       </visual>
     </link>
     <joint name='j_r_wrist_y' type='revolute'>
@@ -991,6 +1054,9 @@
             <uri>../meshes/7dof_palm.obj</uri>
           </mesh>
         </geometry>
+        <material>
+          <diffuse>0.662 0.662 0.819 1</diffuse>
+        </material>
       </visual>
     </link>
     <joint name='j_r_wrist_x' type='revolute'>
