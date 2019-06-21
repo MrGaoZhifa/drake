@@ -28,4 +28,26 @@ drake_cc_binary(
     ],
 )
 
+drake_cc_binary(
+    name = "run_double_pendulum_passive_exe",
+    srcs = [
+        "run_double_pendulum_passive.cc",
+    ],
+    data = [
+        ":models",
+        "//tools:drake_visualizer",
+    ],
+    deps = [
+        "//common:find_resource",
+        "//common:text_logging_gflags",
+        "//geometry:geometry_visualization",
+        "//lcm",
+        "//multibody/parsing",
+        "//multibody/plant",
+        "//systems/analysis",
+        "//systems/framework",
+        "@sdformat",
+    ],
+)
+
 install_data()
