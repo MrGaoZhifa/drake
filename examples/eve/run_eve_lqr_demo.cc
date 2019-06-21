@@ -171,15 +171,16 @@ void DoMain() {
   }
   // Create Q R and LQR controller
   auto plant_context = plant->CreateDefaultContext();
-  const int CartPole_actuation_port = 3;
+  const int EVE_actuation_port = 3;
   // Set nominal torque to zero.
-  Eigen::VectorXd u0 = Eigen::VectorXd::Zero(plant->num_actuators());
-//  cp->GetInputPort("CartPole_actuation").FixValue(cp_context.get(), u0);
-  plant_context->FixInputPort(CartPole_actuation_port, u0);
+  Eigen::VectorXd u0 = plant->MakeActuationMatrix().transpose() * plant->CalcGravityGeneralizedForces(*plant_context);
+  drake::log()->info(plant->CalcGravityGeneralizedForces(*plant_context));
+  drake::log()->info(u0);
+  plant_context->FixInputPort(EVE_actuation_port, u0);
 
   // Set nominal state to the upright fixed point.
   Eigen::VectorXd x0 = Eigen::VectorXd::Zero(plant->num_multibody_states());
-  x0[0] = 3;
+  x0[0] = 5;
   plant_context->SetDiscreteState(x0);
 
 //  // Zero to the actuation port
@@ -192,14 +193,14 @@ void DoMain() {
   // to roughly address difference in units, using sqrt(g/l) as the time
   // constant.
   Eigen::MatrixXd Q = Eigen::MatrixXd::Identity(plant->num_multibody_states(), plant->num_multibody_states());
-  Q.topLeftCorner(plant->num_positions(), plant->num_positions()) = 10 * Eigen::MatrixXd::Identity(plant->num_positions(), plant->num_positions());
-  Q.block<7,7>(0,0) = 1000 * Eigen::MatrixXd::Identity(7,7);
+  Q.topLeftCorner(plant->num_positions(), plant->num_positions()) = 10000 * Eigen::MatrixXd::Identity(plant->num_positions(), plant->num_positions());
+//  Q.block<7,7>(0,0) = 1000 * Eigen::MatrixXd::Identity(7,7);
 
   Eigen::MatrixXd R = Eigen::MatrixXd::Identity(plant->num_actuators(), plant->num_actuators());
   Eigen::MatrixXd N;
   auto lqr =
       builder.AddSystem(systems::controllers::LinearQuadraticRegulator(
-          *plant, *plant_context, Q, R, N, CartPole_actuation_port));
+          *plant, *plant_context, Q, R, N, EVE_actuation_port));
 
   builder.Connect(plant->get_state_output_port(),
                   lqr->get_input_port());
@@ -211,7 +212,7 @@ void DoMain() {
 //  auto gravity_generalized_force =
 //      builder.AddSystem<systems::ConstantVectorSource<double>>(plant->CalcGravityGeneralizedForces(*plant_context));
 //  builder.Connect(gravity_generalized_force->get_output_port(),
-//                  plant->get_applied_generalized_force_input_port());
+//                  adder->get_input_port(1));
 
 
   // Connect plant with scene_graph to get collision information.
@@ -229,8 +230,9 @@ void DoMain() {
   std::unique_ptr<systems::Context<double>> diagram_context =
       diagram->CreateDefaultContext();
 
-  // Set the robot COM position, make sure the robot base is off the ground.
-//  Eigen::VectorXd positions = Eigen::VectorXd::Ones(plant->num_positions());
+//  // Set the robot COM position, make sure the robot base is off the ground.
+//  Eigen::VectorXd positions = Eigen::VectorXd::Zero(plant->num_positions());
+//  positions[0] = 30;
 //  plant->SetPositions(plant_context.get(), positions);
 
 //  // Set robot init velocity for every joint.
