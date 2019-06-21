@@ -3,6 +3,7 @@
 /// This demo sets up a humanoid robot eve from halodi robotics. The file shows
 /// how to use inverse dynamics controller and pid controller to balance the
 /// robot.
+/// Currently the pid controller does not able to solve the deviation problem.
 
 #include <gflags/gflags.h>
 

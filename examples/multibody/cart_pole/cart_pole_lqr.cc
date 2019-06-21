@@ -92,61 +92,10 @@ void DoMain() {
       builder.AddSystem(systems::controllers::LinearQuadraticRegulator(
           *cp, *cp_context, Q, R, N, CartPole_actuation_port));
 
-
-//  const bool has_only_discrete_states_contained_in_one_group =
-//      cp_context->has_only_discrete_state() &&
-//          cp_context->num_discrete_state_groups() == 1;
-//  double time_period = 0.0;
-//  if (has_only_discrete_states_contained_in_one_group) {
-//    optional<systems::PeriodicEventData> periodic_data =
-//        cp->GetUniquePeriodicDiscreteUpdateAttribute();
-//    DRAKE_THROW_UNLESS(static_cast<bool>(periodic_data));
-//    time_period = periodic_data->period_sec();
-//  }
-//  drake::log()->info(std::to_string(time_period));
-
-//  auto linear_system = systems::Linearize(
-//      *cp, *cp_context, systems::InputPortIndex{CartPole_actuation_port},
-//      systems::OutputPortSelection::kNoOutput);
-
-//  drake::log()->info(std::to_string(time_period));
-//  systems::controllers::LinearQuadraticRegulatorResult lqr_result =
-//      (time_period == 0.0)
-//      ? systems::controllers::LinearQuadraticRegulator(linear_system->A(), linear_system->B(), Q,
-//                                 R, N)
-//      : systems::controllers::DiscreteTimeLinearQuadraticRegulator(linear_system->A(),
-//                                             linear_system->B(), Q, R);
-//  drake::log()->info(std::to_string(time_period));
-//  drake::log()->info(linear_system->A());
-//  drake::log()->info(linear_system->B());
-
-//  Eigen::MatrixXd K(4,4);
-//  K << 26551, 992, 34749, 1571,
-//         992,7002,  1267,  266,
-//       34749,1267, 92373, 4214,
-//        1571, 266,  4214,  464;
-//
-//
-//  const auto* const lqr =
-//      builder.AddSystem(std::make_unique<systems::AffineSystem<double>>(Eigen::Matrix<double, 0, 0>::Zero(),   // A
-//                                                       Eigen::MatrixXd::Zero(0, 4),  // B
-//                                                       Eigen::Matrix<double, 0, 1>::Zero(),   // xDot0
-//                                                       Eigen::MatrixXd::Zero(4, 0),  // C
-//                                                       -K,                         // D
-//                                                       u0 + K * x0,                // y0
-//                                                                        time_period));
-
   builder.Connect(cp->get_state_output_port(),
                   lqr->get_input_port());
   builder.Connect(lqr->get_output_port(),
                   cp->get_actuation_input_port());
-
-//    // Set force to actuators.
-//    auto force_source =
-//        builder.AddSystem<systems::ConstantVectorSource<double>>(
-//            Eigen::VectorXd::Ones(2));
-//    builder.Connect(force_source->get_output_port(),
-//                    cp->get_actuation_input_port());
 
   // Connect plant with scene_graph to get collision information.
   DRAKE_DEMAND(!!cp->get_source_id());
@@ -163,13 +112,13 @@ void DoMain() {
       diagram->CreateDefaultContext();
 
   // Create plant_context to set velocity.
-//  systems::Context<double>& plant_context =
-//      diagram->GetMutableSubsystemContext(*cp, diagram_context.get());
-//  // Set init position.
-//  Eigen::VectorXd positions = Eigen::VectorXd::Zero(2);
-//  positions[0] = 0.1;
-//  positions[1] = 0.4;
-//  cp->SetPositions(&plant_context, positions);
+  systems::Context<double>& plant_context =
+      diagram->GetMutableSubsystemContext(*cp, diagram_context.get());
+  // Set init position.
+  Eigen::VectorXd positions = Eigen::VectorXd::Zero(2);
+  positions[0] = 0.0;
+  positions[1] = 0.0;
+  cp->SetPositions(&plant_context, positions);
 
   systems::Simulator<double> simulator(*diagram, std::move(diagram_context));
   simulator.set_publish_every_time_step(true);
