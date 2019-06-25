@@ -1,9 +1,10 @@
 ///
-/// This file use a fully actuated cart pole model to track a specific state
+/// This file use a fully actuated cart pole model to track a trajectory.
 ///
 
 #include <gflags/gflags.h>
 
+#include <drake/systems/framework/event.h>
 #include "drake/common/drake_assert.h"
 #include "drake/common/find_resource.h"
 #include "drake/common/text_logging_gflags.h"
@@ -13,14 +14,15 @@
 #include "drake/multibody/parsing/parser.h"
 #include "drake/multibody/plant/multibody_plant.h"
 #include "drake/systems/analysis/simulator.h"
+#include "drake/systems/controllers/linear_quadratic_regulator.h"
+#include "drake/systems/controllers/pid_controller.h"
 #include "drake/systems/framework/diagram.h"
 #include "drake/systems/framework/diagram_builder.h"
-#include "drake/systems/controllers/linear_quadratic_regulator.h"
+#include "drake/systems/framework/framework_common.h"
+#include "drake/systems/primitives/affine_system.h"
 #include "drake/systems/primitives/constant_vector_source.h"
 #include "drake/systems/primitives/linear_system.h"
-#include "drake/systems/primitives/affine_system.h"
-#include "drake/systems/framework/framework_common.h"
-#include <drake/systems/framework/event.h>
+#include "drake/systems/primitives/trajectory_source.h"
 
 DEFINE_double(target_realtime_rate, 1.0,
               "Rate at which to run the simulation, relative to realtime");
@@ -53,7 +55,8 @@ void DoMain() {
 
   // Load and parse double pendulum SDF from file into a tree.
   drake::multibody::MultibodyPlant<double>* cp =
-      builder.AddSystem<drake::multibody::MultibodyPlant<double>>(FLAGS_max_time_step);
+      builder.AddSystem<drake::multibody::MultibodyPlant<double>>(
+          FLAGS_max_time_step);
   cp->set_name("cart_pole");
   cp->RegisterAsSourceForSceneGraph(&scene_graph);
 
@@ -66,35 +69,41 @@ void DoMain() {
   // Now the plant is complete.
   cp->Finalize();
 
-  // Create LQR Controller.
-  auto cp_context = cp->CreateDefaultContext();
-  const int CartPole_actuation_port = 3;
-  // Set nominal torque to zero.
-  Eigen::VectorXd u0 = Eigen::VectorXd::Zero(2);
-  cp_context->FixInputPort(CartPole_actuation_port, u0);
-
-  // Set nominal state to the upright fixed point.
-  Eigen::VectorXd x0 = Eigen::VectorXd::Zero(4);
-  x0[0] = 1;
-  x0[1] = M_PI;
-  cp_context->SetDiscreteState(x0);
-
-  // Setup LQR Cost matrices (penalize position error 10x more than velocity
-  // to roughly address difference in units, using sqrt(g/l) as the time
-  // constant.
-  Eigen::MatrixXd Q = Eigen::MatrixXd::Identity(4, 4);
-  Q(0, 0) = 10;
-  Q(1, 1) = 10;
-  Eigen::MatrixXd R = Eigen::MatrixXd::Identity(2, 2);
-  Eigen::MatrixXd N;
-  auto lqr =
-      builder.AddSystem(systems::controllers::LinearQuadraticRegulator(
-          *cp, *cp_context, Q, R, N, CartPole_actuation_port));
-
+  // Create PID Controller.
+  const Eigen::VectorXd Kp_base = Eigen::VectorXd::Ones(2) * 200.0;
+  const Eigen::VectorXd Ki_base = Eigen::VectorXd::Ones(2) * 0.0;
+  const Eigen::VectorXd Kd_base = Eigen::VectorXd::Ones(2) * 10.0;
+  systems::controllers::PidController<double>* pid_controller =
+      builder.AddSystem<systems::controllers::PidController<double>>(
+          Kp_base, Ki_base, Kd_base);
   builder.Connect(cp->get_state_output_port(),
-                  lqr->get_input_port());
-  builder.Connect(lqr->get_output_port(),
+                  pid_controller->get_input_port_estimated_state());
+  builder.Connect(pid_controller->get_output_port_control(),
                   cp->get_actuation_input_port());
+
+//  // Set desired position [q,v]' for PID as feedback reference.
+//  auto desired_base_source =
+//      builder.AddSystem<systems::ConstantVectorSource<double>>(
+//          Eigen::VectorXd::Zero(2 * 2));
+//  builder.Connect(desired_base_source->get_output_port(),
+//                  pid_controller->get_input_port_desired_state());
+
+  // Design the trajectory to follow.
+  const std::vector<double> kTimes{0.0, 7.0, 10.0};
+  std::vector<Eigen::MatrixXd> knots(kTimes.size());
+  knots[0] = Eigen::VectorXd::Zero(2);
+  knots[1] = Eigen::VectorXd::Ones(2);
+  knots[2] = Eigen::VectorXd::Ones(2)*2;
+
+  trajectories::PiecewisePolynomial<double> trajectory =
+      trajectories::PiecewisePolynomial<double>::FirstOrderHold(kTimes, knots);
+  // Adds a trajectory source for desired state.
+  auto traj_src = builder.AddSystem<systems::TrajectorySource<double>>(
+      trajectory, 1 /* outputs q + v */);
+  traj_src->set_name("trajectory_source");
+
+  builder.Connect(traj_src->get_output_port(),
+                  pid_controller->get_input_port_desired_state());
 
   // Connect plant with scene_graph to get collision information.
   DRAKE_DEMAND(!!cp->get_source_id());
@@ -133,8 +142,9 @@ void DoMain() {
 }  // namespace drake
 
 int main(int argc, char** argv) {
-  gflags::SetUsageMessage("Using LQR controller to control "
-                          "the fully actuated cart pole model!");
+  gflags::SetUsageMessage(
+      "Using LQR controller to control "
+      "the fully actuated cart pole model!");
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   drake::examples::multibody::cart_pole::DoMain();
   return 0;

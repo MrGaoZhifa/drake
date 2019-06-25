@@ -22,6 +22,25 @@ drake_cc_vector_gen_library(
 )
 
 drake_cc_binary(
+    name = "cart_pole_trajectory",
+    srcs = ["cart_pole_trajectory.cc"],
+    data = ["cart_pole.sdf"],
+    deps = [
+        "//common:find_resource",
+        "//common:text_logging_gflags",
+        "//geometry:geometry_visualization",
+        "//multibody/parsing",
+        "//multibody/plant",
+        "//systems/analysis:simulator",
+        "//systems/controllers",
+        "//systems/framework:diagram",
+        "//systems/framework:event_collection",
+        "//systems/primitives",
+        "@gflags",
+    ],
+)
+
+drake_cc_binary(
     name = "cart_pole_lqr",
     srcs = ["cart_pole_lqr.cc"],
     data = ["cart_pole.sdf"],
