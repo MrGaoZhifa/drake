@@ -13,8 +13,8 @@ package(
 )
 
 drake_cc_binary(
-    name = "run_eve_linear_trajectory",
-    srcs = ["run_eve_linear_trajectory.cc"],
+    name = "run_eve_display_trajectory",
+    srcs = ["run_eve_display_trajectory.cc"],
     data = [
         "//manipulation/models/eve:models",
         "//manipulation/models/qb_hand_description:models",

@@ -44,7 +44,8 @@ class FrameChannel(object):
         if msg.num_links > 1:
             for i in range(1, msg.num_links):
                 name = msg.link_name[i]
-                point1 = np.array(msg.position[i-1]) # msg.position[i] is a tuple and could be transform into np array
+                # msg.position[i] is tuple and can be transformed into np array.
+                point1 = np.array(msg.position[i-1])
                 point2 = np.array(msg.position[i])
                 collision_pair_to_forces[name] = [(point1, point2)]
 
@@ -56,8 +57,8 @@ class FrameChannel(object):
                                tubeRadius=0.005,
                                headRadius=0.01)
 
-            vis.showPolyData(
-                d.getPolyData(), str(key), parent=folder, color=[0, 1, 0])
+                vis.showPolyData(
+                    d.getPolyData(), str(key), parent=folder, color=[0, 1, 0])
 
     def _get_folder(self):
         return om.getOrCreateContainer(
