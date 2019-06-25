@@ -14,6 +14,7 @@ py_library(
         "show_frame.py",
         "show_image.py",
         "show_time.py",
+        "show_trajectory.py",
         "use_builtin_scripts.py",
     ],
     visibility = ["//visibility:public"],

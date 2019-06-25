@@ -4,6 +4,7 @@
 
 #include <gflags/gflags.h>
 
+#include <drake/systems/framework/event.h>
 #include "drake/common/drake_assert.h"
 #include "drake/common/find_resource.h"
 #include "drake/common/text_logging_gflags.h"
@@ -13,14 +14,13 @@
 #include "drake/multibody/parsing/parser.h"
 #include "drake/multibody/plant/multibody_plant.h"
 #include "drake/systems/analysis/simulator.h"
+#include "drake/systems/controllers/linear_quadratic_regulator.h"
 #include "drake/systems/framework/diagram.h"
 #include "drake/systems/framework/diagram_builder.h"
-#include "drake/systems/controllers/linear_quadratic_regulator.h"
+#include "drake/systems/framework/framework_common.h"
+#include "drake/systems/primitives/affine_system.h"
 #include "drake/systems/primitives/constant_vector_source.h"
 #include "drake/systems/primitives/linear_system.h"
-#include "drake/systems/primitives/affine_system.h"
-#include "drake/systems/framework/framework_common.h"
-#include <drake/systems/framework/event.h>
 
 DEFINE_double(target_realtime_rate, 1.0,
               "Rate at which to run the simulation, relative to realtime");
@@ -53,7 +53,8 @@ void DoMain() {
 
   // Load and parse double pendulum SDF from file into a tree.
   drake::multibody::MultibodyPlant<double>* cp =
-      builder.AddSystem<drake::multibody::MultibodyPlant<double>>(FLAGS_max_time_step);
+      builder.AddSystem<drake::multibody::MultibodyPlant<double>>(
+          FLAGS_max_time_step);
   cp->set_name("cart_pole");
   cp->RegisterAsSourceForSceneGraph(&scene_graph);
 
@@ -87,14 +88,11 @@ void DoMain() {
   Q(1, 1) = 10;
   Eigen::MatrixXd R = Eigen::MatrixXd::Identity(2, 2);
   Eigen::MatrixXd N;
-  auto lqr =
-      builder.AddSystem(systems::controllers::LinearQuadraticRegulator(
-          *cp, *cp_context, Q, R, N, CartPole_actuation_port));
+  auto lqr = builder.AddSystem(systems::controllers::LinearQuadraticRegulator(
+      *cp, *cp_context, Q, R, N, CartPole_actuation_port));
 
-  builder.Connect(cp->get_state_output_port(),
-                  lqr->get_input_port());
-  builder.Connect(lqr->get_output_port(),
-                  cp->get_actuation_input_port());
+  builder.Connect(cp->get_state_output_port(), lqr->get_input_port());
+  builder.Connect(lqr->get_output_port(), cp->get_actuation_input_port());
 
   // Connect plant with scene_graph to get collision information.
   DRAKE_DEMAND(!!cp->get_source_id());
@@ -133,8 +131,9 @@ void DoMain() {
 }  // namespace drake
 
 int main(int argc, char** argv) {
-  gflags::SetUsageMessage("Using LQR controller to control "
-                          "the fully actuated cart pole model!");
+  gflags::SetUsageMessage(
+      "Using LQR controller to control "
+      "the fully actuated cart pole model!");
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   drake::examples::multibody::cart_pole::DoMain();
   return 0;
