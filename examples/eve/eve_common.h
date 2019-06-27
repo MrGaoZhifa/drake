@@ -15,10 +15,16 @@
 #include "drake/geometry/geometry_visualization.h"
 #include "drake/geometry/scene_graph.h"
 #include "drake/lcmt_viewer_draw.hpp"
+#include "drake/lcmt_contact_results_for_viz.hpp"
+#include "drake/lcmt_contact_info_for_viz.hpp"
 
 namespace drake {
 namespace examples {
 namespace eve {
+
+void PublishContactToLcm( const std::vector<Eigen::VectorXd> &contact_points,
+                          const std::vector<Eigen::VectorXd> &contact_forces,
+                          drake::lcm::DrakeLcmInterface *dlcm);
 
 void PublishTrajectoryToLcm(const std::string &channel_name,
                             const std::vector<Eigen::Isometry3d> &poses,

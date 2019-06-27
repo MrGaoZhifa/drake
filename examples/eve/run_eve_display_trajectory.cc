@@ -73,6 +73,15 @@ void DoMain() {
   //  std::vector<Eigen::Isometry3d> poses = {pose1, pose2};
 
   PublishFramesToLcm("DRAKE_DRAW_FRAMES", poses, names, &lcm);
+
+  std::vector<Eigen::VectorXd> contact_points;
+  std::vector<Eigen::VectorXd> contact_forces;
+  contact_points.push_back(Eigen::VectorXd::Zero(3));
+  contact_points.push_back(Eigen::VectorXd::Ones(3));
+  contact_forces.push_back(Eigen::VectorXd::Ones(3));
+  contact_forces.push_back(Eigen::VectorXd::Ones(3)*-1);
+
+  PublishContactToLcm(contact_points, contact_forces, &lcm);
 }
 
 }  // namespace eve

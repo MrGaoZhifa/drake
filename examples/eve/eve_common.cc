@@ -5,6 +5,48 @@ namespace examples {
 namespace eve {
 
 
+void PublishContactToLcm( const std::vector<Eigen::VectorXd> &contact_points,
+                          const std::vector<Eigen::VectorXd> &contact_forces,
+                          drake::lcm::DrakeLcmInterface *dlcm) {
+  DRAKE_DEMAND(contact_points.size() == contact_forces.size());
+  drake::lcmt_contact_results_for_viz contact_result{};
+  contact_result.timestamp = 0;
+  int32_t vsize = contact_points.size();
+  contact_result.num_contacts = vsize;
+  contact_result.contact_info.resize(vsize);
+
+  // Put all contact info to contact result vector.
+  for (size_t i = 0; i < contact_points.size(); i++) {
+    drake::lcmt_contact_info_for_viz contact_info{};
+    Eigen::VectorXd contact_point = contact_points[i];
+    Eigen::VectorXd contact_force = contact_forces[i];
+
+    contact_info.body1_name = "A";
+    contact_info.body2_name = "B";
+
+    contact_info.contact_point[0] = contact_point(0);
+    contact_info.contact_point[1] = contact_point(1);
+    contact_info.contact_point[2] = contact_point(2);
+
+    contact_info.contact_force[0] = contact_force(0);
+    contact_info.contact_force[1] = contact_force(1);
+    contact_info.contact_force[2] = contact_force(2);
+
+    contact_info.normal[0] = 0;
+    contact_info.normal[1] = 0;
+    contact_info.normal[2] = 0;
+
+    contact_result.contact_info[i] = contact_info;
+  }
+
+  const int num_bytes = contact_result.getEncodedSize();
+  const size_t size_bytes = static_cast<size_t>(num_bytes);
+  std::vector<uint8_t> bytes(size_bytes);
+  contact_result.encode(bytes.data(), 0, num_bytes);
+  dlcm->Publish("CONTACT_RESULTS", bytes.data(),
+                num_bytes, {});
+}
+
 void PublishTrajectoryToLcm(const std::string &channel_name,
                         const std::vector<Eigen::Isometry3d> &poses,
                         const std::vector<std::string> &names,

@@ -19,6 +19,7 @@ drake_cc_library(
     deps = [
         "//geometry:geometry_visualization",
         "//lcm",
+        "//lcmtypes:contact_results_for_viz",
         "//lcmtypes:viewer",
         "@gflags",
     ],
