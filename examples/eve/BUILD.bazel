@@ -12,6 +12,69 @@ package(
     default_visibility = [":__subpackages__"],
 )
 
+drake_cc_library(
+    name = "eve_common",
+    srcs = ["eve_common.cc"],
+    hdrs = ["eve_common.h"],
+    deps = [
+        "//geometry:geometry_visualization",
+        "//lcm",
+        "//lcmtypes:viewer",
+        "@gflags",
+    ],
+)
+
+drake_cc_binary(
+    name = "run_eve_com",
+    srcs = ["run_eve_com.cc"],
+    data = [
+        "//manipulation/models/eve:models",
+        "//manipulation/models/qb_hand_description:models",
+    ],
+    deps = [
+        ":eve_common",
+        "//common:find_resource",
+        "//common:text_logging_gflags",
+        "//geometry:geometry_visualization",
+        "//lcm",
+        "//lcmtypes:viewer",
+        "//multibody/benchmarks/inclined_plane",
+        "//multibody/parsing",
+        "//multibody/plant",
+        "//multibody/plant:contact_results_to_lcm",
+        "//systems/analysis",
+        "//systems/controllers",
+        "//systems/primitives",
+        "//systems/rendering:pose_bundle_to_draw_message",
+        "@gflags",
+    ],
+)
+
+drake_cc_binary(
+    name = "run_eve_zmp",
+    srcs = ["run_eve_zmp.cc"],
+    data = [
+        "//manipulation/models/eve:models",
+        "//manipulation/models/qb_hand_description:models",
+    ],
+    deps = [
+        "//common:find_resource",
+        "//common:text_logging_gflags",
+        "//geometry:geometry_visualization",
+        "//lcm",
+        "//lcmtypes:viewer",
+        "//multibody/benchmarks/inclined_plane",
+        "//multibody/parsing",
+        "//multibody/plant",
+        "//multibody/plant:contact_results_to_lcm",
+        "//systems/analysis",
+        "//systems/controllers",
+        "//systems/primitives",
+        "//systems/rendering:pose_bundle_to_draw_message",
+        "@gflags",
+    ],
+)
+
 drake_cc_binary(
     name = "run_eve_display_trajectory",
     srcs = ["run_eve_display_trajectory.cc"],
@@ -20,6 +83,7 @@ drake_cc_binary(
         "//manipulation/models/qb_hand_description:models",
     ],
     deps = [
+        ":eve_common",
         "//common:find_resource",
         "//common:text_logging_gflags",
         "//geometry:geometry_visualization",

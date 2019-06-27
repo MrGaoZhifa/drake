@@ -32,7 +32,7 @@
           </mesh>
         </geometry>
         <material>
-          <diffuse>0.380 0.380 0.390 1</diffuse>
+          <diffuse>0.380 0.380 0.390 0.5</diffuse>
         </material>
       </visual>
       <visual name='base_fixed_joint_lump__r_wheel_visual_2'>
@@ -44,7 +44,7 @@
           </mesh>
         </geometry>
         <material>
-          <diffuse>0.380 0.380 0.390 1</diffuse>
+          <diffuse>0.380 0.380 0.390 0.5</diffuse>
         </material>
       </visual>
     </link>
@@ -113,7 +113,7 @@
           </mesh>
         </geometry>
         <material>
-          <diffuse>0.662 0.713 0.819 1</diffuse>
+          <diffuse>0.662 0.713 0.819 0.5</diffuse>
         </material>
       </visual>
     </link>
@@ -158,7 +158,7 @@
           </mesh>
         </geometry>
         <material>
-          <diffuse>0.662 0.713 0.819 1</diffuse>
+          <diffuse>0.662 0.713 0.819 0.5</diffuse>
         </material>
       </visual>
     </link>
@@ -203,7 +203,7 @@
           </mesh>
         </geometry>
         <material>
-          <diffuse>0.662 0.713 0.819 1</diffuse>
+          <diffuse>0.662 0.713 0.819 0.5</diffuse>
         </material>
       </visual>
     </link>
@@ -248,7 +248,7 @@
           </mesh>
         </geometry>
         <material>
-          <diffuse>0.921 0.921 0.980 1</diffuse>
+          <diffuse>0.921 0.921 0.980 0.5</diffuse>
         </material>
       </visual>
     </link>
@@ -293,7 +293,7 @@
           </mesh>
         </geometry>
         <material>
-          <diffuse>0.341 0.337 0.921 1</diffuse>
+          <diffuse>0.341 0.337 0.921 0.5</diffuse>
         </material>
       </visual>
       <gravity>1</gravity>
@@ -401,7 +401,7 @@
           </mesh>
         </geometry>
         <material>
-          <diffuse>0.729 0.749 0.737 1</diffuse>
+          <diffuse>0.729 0.749 0.737 0.5</diffuse>
         </material>
       </visual>
     </link>
@@ -446,7 +446,7 @@
           </mesh>
         </geometry>
         <material>
-          <diffuse>0.729 0.749 0.737 1</diffuse>
+          <diffuse>0.729 0.749 0.737 0.5</diffuse>
         </material>
       </visual>
     </link>
@@ -491,7 +491,7 @@
           </mesh>
         </geometry>
         <material>
-          <diffuse>0.662 0.713 0.819 1</diffuse>
+          <diffuse>0.662 0.713 0.819 0.5</diffuse>
         </material>
       </visual>
     </link>
@@ -536,7 +536,7 @@
           </mesh>
         </geometry>
         <material>
-          <diffuse>0.662 0.713 0.819 1</diffuse>
+          <diffuse>0.662 0.713 0.819 0.5</diffuse>
         </material>
       </visual>
     </link>
@@ -581,7 +581,7 @@
           </mesh>
         </geometry>
         <material>
-          <diffuse>0.662 0.662 0.819 1</diffuse>
+          <diffuse>0.662 0.662 0.819 0.5</diffuse>
         </material>
       </visual>
     </link>
@@ -626,7 +626,7 @@
           </mesh>
         </geometry>
         <material>
-          <diffuse>0.662 0.662 0.819 1</diffuse>
+          <diffuse>0.662 0.662 0.819 0.5</diffuse>
         </material>
       </visual>
     </link>
@@ -671,7 +671,7 @@
           </mesh>
         </geometry>
         <material>
-          <diffuse>0.662 0.662 0.819 1</diffuse>
+          <diffuse>0.662 0.662 0.819 0.5</diffuse>
         </material>
       </visual>
     </link>
@@ -718,7 +718,7 @@
           </mesh>
         </geometry>
         <material>
-            <diffuse>0.886 0.956 0.972 1</diffuse>
+            <diffuse>0.886 0.956 0.972 0.5</diffuse>
         </material>
       </visual>
       <gravity>1</gravity>
@@ -785,7 +785,7 @@
           </mesh>
         </geometry>
         <material>
-          <diffuse>0.729 0.749 0.737 1</diffuse>
+          <diffuse>0.729 0.749 0.737 0.5</diffuse>
         </material>
       </visual>
     </link>
@@ -830,7 +830,7 @@
           </mesh>
         </geometry>
         <material>
-          <diffuse>0.729 0.749 0.737 1</diffuse>
+          <diffuse>0.729 0.749 0.737 0.5</diffuse>
         </material>
       </visual>
     </link>
@@ -875,7 +875,7 @@
           </mesh>
         </geometry>
         <material>
-          <diffuse>0.662 0.713 0.819 1</diffuse>
+          <diffuse>0.662 0.713 0.819 0.5</diffuse>
         </material>
       </visual>
     </link>
@@ -920,7 +920,7 @@
           </mesh>
         </geometry>
         <material>
-          <diffuse>0.662 0.713 0.819 1</diffuse>
+          <diffuse>0.662 0.713 0.819 0.5</diffuse>
         </material>
       </visual>
     </link>
@@ -965,7 +965,7 @@
           </mesh>
         </geometry>
         <material>
-          <diffuse>0.662 0.662 0.819 1</diffuse>
+          <diffuse>0.662 0.662 0.819 0.5</diffuse>
         </material>
       </visual>
     </link>
@@ -1010,7 +1010,7 @@
           </mesh>
         </geometry>
         <material>
-          <diffuse>0.662 0.662 0.819 1</diffuse>
+          <diffuse>0.662 0.662 0.819 0.5</diffuse>
         </material>
       </visual>
     </link>
@@ -1055,7 +1055,7 @@
           </mesh>
         </geometry>
         <material>
-          <diffuse>0.662 0.662 0.819 1</diffuse>
+          <diffuse>0.662 0.662 0.819 0.5</diffuse>
         </material>
       </visual>
     </link>

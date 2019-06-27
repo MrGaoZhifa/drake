@@ -21,6 +21,7 @@ class FrameChannel(object):
         self._channel = channel
         # Link names that were previously published.
         self._link_name_published = []
+        self._folder_name = 'Contact Results'
 
     def handle_message(self, msg):
         print("frame channel was called")
@@ -29,7 +30,12 @@ class FrameChannel(object):
             self.remove_folder()
             self._link_name_published = msg.link_name
 
-        folder = self._get_folder()
+        # folder = self._get_folder()
+        # Removes the folder completely.
+        om.removeFromObjectModel(om.findObjectByName(self._folder_name))
+
+        # Recreates folder.
+        folder = om.getOrCreateContainer(self._folder_name)
 
         for i in range(0, msg.num_links):
             name = msg.link_name[i]
