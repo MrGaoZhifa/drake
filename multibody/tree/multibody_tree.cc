@@ -944,6 +944,63 @@ void MultibodyTree<T>::CalcPointsPositions(
 }
 
 template <typename T>
+void MultibodyTree<T>::CalcCenterOfMassPosition(
+    const systems::Context<T>& context, EigenPtr<Vector3<T>> p_WBcm,
+    optional<std::unordered_set<ModelInstanceIndex>> model_instances) const {
+  DRAKE_THROW_UNLESS(p_WBcm != nullptr);
+  DRAKE_THROW_UNLESS(p_WBcm->rows() == 3);
+  DRAKE_THROW_UNLESS(p_WBcm->cols() == 1);
+  DRAKE_THROW_UNLESS(num_bodies() > 1);
+
+  Vector3<T> Mp = Vector3<T>::Zero();
+  T M = 0;
+
+  // Selected model instances specified.
+  if (model_instances && !model_instances->empty()) {
+    // TODO(Zhaoyuan): Consider how to report meaningful error if model_instance
+    // is invalid.
+    for (auto model_instance : *model_instances) {
+      DRAKE_THROW_UNLESS(model_instance != world_model_instance());
+      DRAKE_THROW_UNLESS(instance_index_to_name_.count(model_instance) != 0);
+    }
+
+    for (auto model_instance : *model_instances) {
+      std::vector<BodyIndex> body_indexes = GetBodyIndices(model_instance);
+      for (BodyIndex body_index : body_indexes) {
+        const Body<T>& body = get_body(body_index);
+
+        Vector3<T> pi_BoBcm = body.CalcCenterOfMassInBodyFrame(context);
+        Vector3<T> pi_WBcm = Vector3<T>::Zero(3);
+        CalcPointsPositions(context, body.body_frame(), pi_BoBcm, world_frame(),
+                            &pi_WBcm);
+
+        // Calculate M and M * p in world frame.
+        const T& body_mass = body.get_mass(context);
+        Mp += body_mass * pi_WBcm;
+        M += body_mass;
+      }
+    }
+  } else {
+    // Selected model instances unspecified, use all the bodies in the
+    // multibody_tree. Start from 1 to avoid the world_body.
+    for (BodyIndex body_index(1); body_index < num_bodies(); ++body_index) {
+      const Body<T> &body = get_body(body_index);
+
+      Vector3<T> pi_BoBcm = body.CalcCenterOfMassInBodyFrame(context);
+      Vector3<T> pi_WBcm = Vector3<T>::Zero(3);
+      CalcPointsPositions(context, body.body_frame(), pi_BoBcm, world_frame(),
+                          &pi_WBcm);
+
+      // Calculate M and M * p in world frame.
+      const T &body_mass = body.get_mass(context);
+      Mp += body_mass * pi_WBcm;
+      M += body_mass;
+    }
+  }
+  p_WBcm->template topRows<3>() = Mp / M;
+}
+
+template <typename T>
 const RigidTransform<T>& MultibodyTree<T>::EvalBodyPoseInWorld(
     const systems::Context<T>& context,
     const Body<T>& body_B) const {

@@ -1442,6 +1442,32 @@ class MultibodyPlant : public internal::MultibodyTreeSystem<T> {
         context, frame_B, p_BQi, frame_A, p_AQi);
   }
 
+  /// This method computes the Center of Mass position of specific model
+  /// instances with respect to world frame. The models are selected by set of
+  /// model instances `model_instances`. If no model_instances provided, the
+  /// function will consider all the bodies in `MultibodyPlant`.
+  ///
+  /// @param[in] context
+  ///   The context containing the state of the model. It stores the
+  ///   generalized positions q of the model.
+  /// @param[out] p_WBcm
+  ///   The output position of Center of Mass. The output `p_WBcm` **must** have
+  ///   three rows.
+  /// @param[in] model_instances
+  ///   The set selected model instances. If no model instance is select, aka
+  ///   the model_instances is left empty, the method returns the position of
+  ///   Center of Mass for all the bodies in the MultibodyPlant.
+  ///
+  /// @note model_instances should not include world_model_instance.
+  /// model_instances should exist in the MultibodyPlant.
+  void CalcCenterOfMassPosition(const systems::Context<T>& context,
+                                EigenPtr<Vector3<T>> p_WBcm,
+                                optional<std::unordered_set<ModelInstanceIndex>>
+                                    model_instances = nullopt) const {
+    return internal_tree().CalcCenterOfMassPosition(context, p_WBcm,
+                                                    model_instances);
+  }
+
   /// Evaluate the pose `X_WB` of a body B in the world frame W.
   /// @param[in] context
   ///   The context storing the state of the model.

@@ -7,6 +7,7 @@
 #include <tuple>
 #include <type_traits>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -1224,6 +1225,12 @@ class MultibodyTree {
       const Eigen::Ref<const MatrixX<T>>& p_BQi,
       const Frame<T>& frame_A,
       EigenPtr<MatrixX<T>> p_AQi) const;
+
+  /// See MultibodyPlant method.
+  void CalcCenterOfMassPosition(const systems::Context<T>& context,
+                                EigenPtr<Vector3<T>> p_WBcm,
+                                optional<std::unordered_set<ModelInstanceIndex>>
+                                    model_instances = nullopt) const;
 
   /// See MultibodyPlant method.
   const math::RigidTransform<T>& EvalBodyPoseInWorld(
