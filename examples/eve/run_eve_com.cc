@@ -392,18 +392,21 @@ void DoMain() {
 //  simulator.AdvanceTo(FLAGS_simulation_time);
 
   lcm::DrakeLcm lcm;
+
+  // Simulate small steps and compute Center of Mass with updated context.
   for (int step = 1; step < 100; ++step) {
     simulator.AdvanceTo(step * 0.1f);
-
 
     std::vector<std::string> names;
     std::vector<Eigen::Isometry3d> poses;
     Eigen::VectorXd Mx = Eigen::VectorXd::Zero(3);
+    Eigen::VectorXd Mv = Eigen::VectorXd::Zero(3);
     double Mass = 0;
 
     names.push_back("World");
     poses.push_back(Eigen::Isometry3d::Identity());
 
+    // Compute Center of Mass for each body position.
     for (multibody::BodyIndex b(0); b<plant.num_bodies(); ++b) {
       if (plant.get_body(b).name() == "WorldBody")
         continue;
@@ -415,20 +418,25 @@ void DoMain() {
       pose.translation() = p_AQi;
       poses.push_back(pose);
 
-      // For compute COM.
-//      drake::log()->info("body " + plant.get_body(b).name() + " has mass " + std::to_string(plant.get_body(b).get_mass(plant_context)));
+      // Calculate Center of Mass position and velocity in world frame.
       Mx += plant.get_body(b).get_mass(plant_context) * p_AQi;
+      Mv += plant.get_body(b).get_mass(plant_context) * plant.get_body(b).EvalSpatialVelocityInWorld(plant_context).Shift(p_BQi).translational();
       Mass += plant.get_body(b).get_mass(plant_context);
     }
 
-//    drake::log()->info((Mx/Mass).transpose());
+    // Visualize Center of Mass position.
     names.push_back("ROBOT_COM");
     Eigen::Isometry3d com_pose;
     com_pose.translation() = Mx/Mass;
     poses.push_back(com_pose);
-
-
     PublishFramesToLcm("DRAKE_DRAW_FRAMES", poses, names, &lcm);
+
+    // Visualize Center of Mass velocity using collision visualization.
+    std::vector<Eigen::VectorXd> points;
+    std::vector<Eigen::VectorXd> vels;
+    points.push_back(Mx/Mass);
+    vels.push_back(Mv/Mass);
+    PublishContactToLcm(points, vels, &lcm);
   }
 }
 
