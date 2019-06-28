@@ -14,6 +14,7 @@
 #include "drake/common/drake_assert.h"
 #include "drake/common/find_resource.h"
 #include "drake/common/text_logging_gflags.h"
+#include "drake/examples/eve/eve_common.h"
 #include "drake/geometry/geometry_visualization.h"
 #include "drake/geometry/scene_graph.h"
 #include "drake/lcm/drake_lcm.h"
@@ -29,7 +30,6 @@
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/systems/primitives/constant_vector_source.h"
 #include "drake/systems/primitives/matrix_gain.h"
-#include "drake/examples/eve/eve_common.h"
 
 namespace drake {
 namespace examples {
@@ -88,11 +88,12 @@ DEFINE_string(bodyB_type, "sphere",
               "Valid body types are "
               "'sphere', 'block', or 'block_with_4Spheres'");
 
-//class ShowCOM final : public systems::LeafSystem<double> {
+// class ShowCOM final : public systems::LeafSystem<double> {
 // public:
 //  ShowCOM(MultibodyPlant<double>* plant) : plant_(plant) {
 //    this->DeclareVectorOutputPort(
-//        "Generalized_Acceleration", systems::BasicVector<double>(plant_->num_velocities()),
+//        "Generalized_Acceleration",
+//        systems::BasicVector<double>(plant_->num_velocities()),
 //        &ShowCOM::remap_output);
 //  }
 //
@@ -199,20 +200,20 @@ void DoMain() {
   // Plot and Test the port dimension and numbering.
   drake::log()->info(
       "num_joints: " + std::to_string(plant.num_joints()) +
-          ", num_positions: " + std::to_string(plant.num_positions()) +
-          ", num_velocities: " + std::to_string(plant.num_velocities()) +
-          ", num_actuators: " + std::to_string(plant.num_actuators()));
+      ", num_positions: " + std::to_string(plant.num_positions()) +
+      ", num_velocities: " + std::to_string(plant.num_velocities()) +
+      ", num_actuators: " + std::to_string(plant.num_actuators()));
   drake::log()->info(
       "num_joints: " + std::to_string(fake_plant.num_joints()) +
-          ", num_positions: " + std::to_string(fake_plant.num_positions()) +
-          ", num_velocities: " + std::to_string(fake_plant.num_velocities()) +
-          ", num_actuators: " + std::to_string(fake_plant.num_actuators()));
+      ", num_positions: " + std::to_string(fake_plant.num_positions()) +
+      ", num_velocities: " + std::to_string(fake_plant.num_velocities()) +
+      ", num_actuators: " + std::to_string(fake_plant.num_actuators()));
   int index = 0;
   for (multibody::JointActuatorIndex a(0); a < plant.num_actuators(); ++a) {
     drake::log()->info(std::to_string(index++));
     drake::log()->info(
         "PLANT JOINT: " + plant.get_joint_actuator(a).joint().name() +
-            " has actuator " + plant.get_joint_actuator(a).name());
+        " has actuator " + plant.get_joint_actuator(a).name());
 
     //    Eigen::VectorXd u_instance(1);
     //    u_instance << 100;
@@ -231,21 +232,21 @@ void DoMain() {
 
     drake::log()->info(
         "PLANT JOINT: " + plant.get_joint(j).name() + ", position@ " +
-            std::to_string(plant.get_joint(j).position_start()) + ", velocity@ " +
-            std::to_string(plant.get_joint(j).velocity_start()));
+        std::to_string(plant.get_joint(j).position_start()) + ", velocity@ " +
+        std::to_string(plant.get_joint(j).velocity_start()));
     if (index <= fake_plant.num_joints())
       drake::log()->info(
           "FAKE PLANT JOINT: " + fake_plant.get_joint(j).name() +
-              ", position@" +
-              std::to_string(fake_plant.get_joint(j).position_start()) +
-              ", velocity@" +
-              std::to_string(fake_plant.get_joint(j).velocity_start()));
+          ", position@" +
+          std::to_string(fake_plant.get_joint(j).position_start()) +
+          ", velocity@" +
+          std::to_string(fake_plant.get_joint(j).velocity_start()));
   }
   drake::log()->info(plant.MakeActuationMatrix());
 
-//  for (geometry::FrameId f(0); f<plant.num_frames(); ++f) {
-//    drake::log()->info(plant.GetBodyFromFrameId(f));
-//  }
+  //  for (geometry::FrameId f(0); f<plant.num_frames(); ++f) {
+  //    drake::log()->info(plant.GetBodyFromFrameId(f));
+  //  }
 
   // Create InverseDynamicsController using fake_plant.
   const int Q = plant.num_positions();
@@ -389,54 +390,72 @@ void DoMain() {
   simulator.set_publish_every_time_step(true);
   simulator.set_target_realtime_rate(FLAGS_target_realtime_rate);
   simulator.Initialize();
-//  simulator.AdvanceTo(FLAGS_simulation_time);
+  //  simulator.AdvanceTo(FLAGS_simulation_time);
 
   lcm::DrakeLcm lcm;
 
   // Simulate small steps and compute Center of Mass with updated context.
-  for (int step = 1; step < 100; ++step) {
-    simulator.AdvanceTo(step * 0.1f);
+  for (int step = 1; step < 2000; ++step) {
+    simulator.AdvanceTo(step * 0.01f);
 
     std::vector<std::string> names;
     std::vector<Eigen::Isometry3d> poses;
     Eigen::VectorXd Mx = Eigen::VectorXd::Zero(3);
     Eigen::VectorXd Mv = Eigen::VectorXd::Zero(3);
+    Eigen::MatrixXd MJ = Eigen::MatrixXd::Zero(3, plant.num_velocities());
     double Mass = 0;
 
     names.push_back("World");
     poses.push_back(Eigen::Isometry3d::Identity());
 
     // Compute Center of Mass for each body position.
-    for (multibody::BodyIndex b(0); b<plant.num_bodies(); ++b) {
-      if (plant.get_body(b).name() == "WorldBody")
-        continue;
-      names.push_back(plant.get_body(b).name()+"_COM");
-      Eigen::MatrixXd p_BQi = plant.get_body(b).CalcCenterOfMassInBodyFrame(plant_context);
-      Eigen::MatrixXd p_AQi(3,1);
-      plant.CalcPointsPositions(plant_context, plant.get_body(b).body_frame(), p_BQi, plant.world_frame(), &p_AQi);
+    for (multibody::BodyIndex b(0); b < plant.num_bodies(); ++b) {
+      if (plant.get_body(b).name() == "WorldBody") continue;
+      names.push_back(plant.get_body(b).name() + "_COM");
+      Eigen::MatrixXd p_BQi =
+          plant.get_body(b).CalcCenterOfMassInBodyFrame(plant_context);
+      Eigen::MatrixXd p_AQi(3, 1);
+      plant.CalcPointsPositions(plant_context, plant.get_body(b).body_frame(),
+                                p_BQi, plant.world_frame(), &p_AQi);
       Eigen::Isometry3d pose;
       pose.translation() = p_AQi;
       poses.push_back(pose);
 
       // Calculate Center of Mass position and velocity in world frame.
       Mx += plant.get_body(b).get_mass(plant_context) * p_AQi;
-      Mv += plant.get_body(b).get_mass(plant_context) * plant.get_body(b).EvalSpatialVelocityInWorld(plant_context).Shift(p_BQi).translational();
+      Mv += plant.get_body(b).get_mass(plant_context) *
+            plant.get_body(b)
+                .EvalSpatialVelocityInWorld(plant_context)
+                .Shift(p_BQi)
+                .translational();
+
+      Eigen::MatrixXd mj = Eigen::MatrixXd::Zero(3, plant.num_velocities());
+      plant.CalcJacobianTranslationalVelocity(
+          plant_context, multibody::JacobianWrtVariable::kV,
+          plant.get_body(b).body_frame(), p_BQi, plant.world_frame(),
+          plant.world_frame(), &mj);
+      MJ += plant.get_body(b).get_mass(plant_context) * mj;
+
       Mass += plant.get_body(b).get_mass(plant_context);
     }
 
     // Visualize Center of Mass position.
     names.push_back("ROBOT_COM");
     Eigen::Isometry3d com_pose;
-    com_pose.translation() = Mx/Mass;
+    com_pose.translation() = Mx / Mass;
     poses.push_back(com_pose);
     PublishFramesToLcm("DRAKE_DRAW_FRAMES", poses, names, &lcm);
 
     // Visualize Center of Mass velocity using collision visualization.
     std::vector<Eigen::VectorXd> points;
     std::vector<Eigen::VectorXd> vels;
-    points.push_back(Mx/Mass);
-    vels.push_back(Mv/Mass);
+    points.push_back(Mx / Mass);
+    vels.push_back(Mv / Mass);
     PublishContactToLcm(points, vels, &lcm);
+
+    // Compute the Jacobian of CoM.
+    Eigen::MatrixXd Jcm = MJ / Mass;
+    drake::log()->info(Jcm);
   }
 }
 
