@@ -1233,6 +1233,12 @@ class MultibodyTree {
                                     model_instances = nullopt) const;
 
   /// See MultibodyPlant method.
+  void CalcCenterOfMassVelocity(const systems::Context<T>& context,
+                                EigenPtr<Vector3<T>> v_WBcm,
+                                optional<std::unordered_set<ModelInstanceIndex>>
+                                model_instances = nullopt) const;
+
+  /// See MultibodyPlant method.
   const math::RigidTransform<T>& EvalBodyPoseInWorld(
       const systems::Context<T>& context,
       const Body<T>& body_B) const;

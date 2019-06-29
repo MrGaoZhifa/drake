@@ -1468,6 +1468,14 @@ class MultibodyPlant : public internal::MultibodyTreeSystem<T> {
                                                     model_instances);
   }
 
+  void CalcCenterOfMassVelocity(const systems::Context<T>& context,
+                                EigenPtr<Vector3<T>> v_WBcm,
+                                optional<std::unordered_set<ModelInstanceIndex>>
+                                model_instances = nullopt) const {
+    return internal_tree().CalcCenterOfMassVelocity(context, v_WBcm,
+                                                    model_instances);
+  }
+
   /// Evaluate the pose `X_WB` of a body B in the world frame W.
   /// @param[in] context
   ///   The context storing the state of the model.
