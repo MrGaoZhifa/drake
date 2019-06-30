@@ -1,22 +1,16 @@
-# -*- python -*-
-
 load(
     "@drake//tools/skylark:drake_cc.bzl",
     "drake_cc_binary",
-    "drake_cc_googletest",
-    "drake_cc_library",
 )
-load("//tools/lint:lint.bzl", "add_lint_tests")
 
 package(
     default_visibility = [":__subpackages__"],
 )
 
 drake_cc_binary(
-    name = "run_simple_arm",
-    srcs = ["run_simple_arm.cc"],
+    name = "run_kuka_idc",
+    srcs = ["run_kuka_idc_demo.cc"],
     data = [
-        "//manipulation/models/simple_arm:models",
         "//manipulation/models/iiwa_description:models",
     ],
     deps = [
@@ -30,10 +24,6 @@ drake_cc_binary(
         "//systems/analysis",
         "//systems/controllers",
         "//systems/primitives:constant_vector_source",
-        "//systems/rendering:pose_bundle_to_draw_message",
         "@gflags",
     ],
 )
-
-
-add_lint_tests()
