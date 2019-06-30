@@ -43,7 +43,7 @@ void DoMain() {
       *builder.AddSystem<geometry::SceneGraph>();
   scene_graph.set_name("scene_graph");
 
-  // Load and parse double pendulum SDF from file into a tree.
+  // Load and parse double pendulum SDF from file into a MultibodyPlant.
   multibody::MultibodyPlant<double>* dp =
       builder.AddSystem<multibody::MultibodyPlant<double>>(FLAGS_max_time_step);
   dp->set_name("plant");
@@ -51,11 +51,9 @@ void DoMain() {
 
   multibody::Parser parser(dp);
   const std::string sdf_path = FindResourceOrThrow(kDoublePendulumSdfPath);
-  multibody::ModelInstanceIndex plant_model_instance_index =
-      parser.AddModelFromFile(sdf_path);
-  (void)plant_model_instance_index;
+  parser.AddModelFromFile(sdf_path);
 
-  // Weld the base link to world frame with no rotation.
+  // Weld the base link to world frame.
   const auto& root_link = dp->GetBodyByName("base");
   dp->AddJoint<multibody::WeldJoint>("weld_base", dp->world_body(), nullopt,
                                      root_link, nullopt,
@@ -77,11 +75,11 @@ void DoMain() {
   std::unique_ptr<systems::Context<double>> diagram_context =
       diagram->CreateDefaultContext();
 
-  // Create plant_context to set velocity.
+  // Create plant_context to set positions.
   systems::Context<double>& plant_context =
       diagram->GetMutableSubsystemContext(*dp, diagram_context.get());
 
-  // Set init position.
+  // Set init positions.
   Eigen::VectorXd positions = Eigen::VectorXd::Zero(2);
   positions[0] = 0.1;
   positions[1] = 0.4;

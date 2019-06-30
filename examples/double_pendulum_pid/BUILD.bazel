@@ -14,7 +14,6 @@ drake_cc_binary(
         "//tools:drake_visualizer",
     ],
     deps = [
-        "//common:essential",
         "//common:find_resource",
         "//common:text_logging_gflags",
         "//geometry:geometry_visualization",
@@ -24,7 +23,6 @@ drake_cc_binary(
         "//systems/analysis",
         "//systems/controllers",
         "//systems/framework",
-        "@sdformat",
     ],
 )
 
@@ -46,7 +44,6 @@ drake_cc_binary(
         "//multibody/plant",
         "//systems/analysis",
         "//systems/framework",
-        "@sdformat",
     ],
 )
 
