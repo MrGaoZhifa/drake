@@ -395,8 +395,8 @@ void DoMain() {
   lcm::DrakeLcm lcm;
 
   // Simulate small steps and compute Center of Mass with updated context.
-  for (int step = 1; step < 2000; ++step) {
-    simulator.AdvanceTo(step * 0.01f);
+  for (int step = 1; step < 200; ++step) {
+    simulator.AdvanceTo(step * 0.1f);
 
     std::vector<std::string> names;
     std::vector<Eigen::Isometry3d> poses;
@@ -423,20 +423,27 @@ void DoMain() {
 
       // Calculate Center of Mass position and velocity in world frame.
       Mx += plant.get_body(b).get_mass(plant_context) * p_AQi;
-      Mv += plant.get_body(b).get_mass(plant_context) *
-            plant.get_body(b)
-                .EvalSpatialVelocityInWorld(plant_context)
-                .Shift(p_BQi)
-                .translational();
+      const Eigen::Vector3d v_WQi_W =
+          plant.get_body(b)
+              .EvalSpatialVelocityInWorld(plant_context)
+              .Shift(plant.get_body(b)
+                         .EvalPoseInWorld(plant_context)
+                         .rotation()
+                         .matrix() *
+                     p_BQi)
+              .translational();
+      Mv += plant.get_body(b).get_mass(plant_context) * v_WQi_W;
 
-      Eigen::MatrixXd mj = Eigen::MatrixXd::Zero(3, plant.num_velocities());
+      Eigen::MatrixXd Ji = Eigen::MatrixXd::Zero(3, plant.num_velocities());
       plant.CalcJacobianTranslationalVelocity(
           plant_context, multibody::JacobianWrtVariable::kV,
           plant.get_body(b).body_frame(), p_BQi, plant.world_frame(),
-          plant.world_frame(), &mj);
-      MJ += plant.get_body(b).get_mass(plant_context) * mj;
+          plant.world_frame(), &Ji);
+      MJ += plant.get_body(b).get_mass(plant_context) * Ji;
 
       Mass += plant.get_body(b).get_mass(plant_context);
+
+      DRAKE_THROW_UNLESS((Ji*plant.GetVelocities(plant_context, plant_model_instance_index) - v_WQi_W).norm() < 1e-12);
     }
 
     // Visualize Center of Mass position.
@@ -456,6 +463,8 @@ void DoMain() {
     // Compute the Jacobian of CoM.
     Eigen::MatrixXd Jcm = MJ / Mass;
     drake::log()->info(Jcm);
+
+    DRAKE_THROW_UNLESS((Jcm*plant.GetVelocities(plant_context, plant_model_instance_index) - Mv / Mass).norm() < 1e-12);
   }
 }
 
