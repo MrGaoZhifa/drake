@@ -24,10 +24,79 @@ PublishFramesToLcm("DRAKE_DRAW_TRAJECTORY", {
 #include "drake/systems/framework/diagram.h"
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/examples/eve/eve_common.h"
+#include "drake/systems/primitives/trajectory_source.h"
+#include "drake/systems/framework/event_status.h"
+
+DEFINE_double(target_realtime_rate, 1.0,
+              "Rate at which to run the simulation, relative to realtime");
+DEFINE_double(simulation_time, 10, "How long to simulate.");
+DEFINE_double(max_time_step, 1.0e-3,
+              "Simulation time step used for integrator.");
 
 namespace drake {
 namespace examples {
 namespace eve {
+
+class DisplayTrajectoryInSim : public systems::LeafSystem<double> {
+ public:
+  DisplayTrajectoryInSim(lcm::DrakeLcm& lcm) : lcm_(lcm) {
+    this->DeclareVectorInputPort(
+        "Trajectory", systems::BasicVector<double>(6));
+
+    DeclarePerStepPublishEvent(
+        &DisplayTrajectoryInSim::MyPublishHandler);
+  }
+
+  void remap_output(const systems::Context<double>& context,
+                    systems::BasicVector<double>* output_vector) const {
+    auto input_value = this->EvalVectorInput(context, 0)->get_value();
+    drake::log()->info(input_value.transpose());
+
+    std::vector<std::string> names;
+    std::vector<Eigen::Isometry3d> poses;
+    names.push_back("Time_" + std::to_string(context.get_time()));
+
+    Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
+    pose.translation() = input_value.segment<3>(0);
+    poses.push_back(pose);
+
+    PublishFramesToLcm("DRAKE_DRAW_FRAMES", poses, names, &lcm_);
+//    PublishContactToLcm(contact_points, contact_forces, &lcm);
+
+    auto output_value = output_vector->get_mutable_value();
+    output_value = input_value;
+  }
+
+ private:
+  lcm::DrakeLcm& lcm_;
+
+  systems::EventStatus MyPublishHandler(const systems::Context<double>& context) const {
+    MySuccessfulPublishHandler(context);
+    return systems::EventStatus::Succeeded();
+  }
+
+  void MySuccessfulPublishHandler(const systems::Context<double>& context) const {
+    auto input_value = this->EvalVectorInput(context, 0)->get_value();
+    drake::log()->info(input_value.transpose());
+
+    std::vector<std::string> names;
+    std::vector<Eigen::Isometry3d> poses;
+    names.push_back("Time_" + std::to_string(context.get_time()));
+
+    Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
+    pose.translation() = input_value.segment<3>(0);
+    poses.push_back(pose);
+
+    PublishFramesToLcm("DRAKE_DRAW_FRAMES", poses, names, &lcm_);
+
+    std::vector<Eigen::VectorXd> contact_points;
+    std::vector<Eigen::VectorXd> contact_forces;
+    contact_points.push_back(input_value.segment(0,3));
+    contact_forces.push_back(input_value.segment(3,3));
+
+    PublishContactToLcm(contact_points, contact_forces, &lcm_);
+  }
+};
 
 void DoMain() {
   // Design the trajectory to follow.
@@ -84,6 +153,53 @@ void DoMain() {
   PublishContactToLcm(contact_points, contact_forces, &lcm);
 }
 
+void DoMain2() {
+  logging::HandleSpdlogGflags();
+
+  systems::DiagramBuilder<double> builder;
+
+  geometry::SceneGraph<double>& scene_graph =
+      *builder.AddSystem<geometry::SceneGraph>();
+  scene_graph.set_name("scene_graph");
+
+  // Design the trajectory to follow.
+  const std::vector<double> kTimes{0.0, 2.0, 7.0, 10.0};
+  std::vector<Eigen::MatrixXd> knots(kTimes.size());
+  knots[0] = Eigen::Vector3d(0,0,0);
+  knots[1] = Eigen::Vector3d(1,1,0);
+  knots[2] = Eigen::Vector3d(2,-1,0);
+  knots[3] = Eigen::Vector3d(3,0,0);
+//  trajectories::PiecewisePolynomial<double> trajectory =
+//      trajectories::PiecewisePolynomial<double>::FirstOrderHold(kTimes, knots);
+  Eigen::VectorXd knot_dot_start = Eigen::VectorXd::Zero(3);
+  Eigen::MatrixXd knot_dot_end = Eigen::VectorXd::Zero(3);
+  trajectories::PiecewisePolynomial<double> trajectory =
+      trajectories::PiecewisePolynomial<double>::Cubic(
+          kTimes, knots, knot_dot_start, knot_dot_end);
+
+  // Adds a trajectory source for desired state.
+  auto traj_src = builder.AddSystem<systems::TrajectorySource<double>>(
+      trajectory, 1 /* outputs q + v */);
+  traj_src->set_name("trajectory_source");
+
+  lcm::DrakeLcm lcm;
+  auto displayer = builder.AddSystem<DisplayTrajectoryInSim>(lcm);
+  builder.Connect(traj_src->get_output_port(), displayer->get_input_port(0));
+
+
+  auto diagram = builder.Build();
+  std::unique_ptr<systems::Context<double>> diagram_context =
+      diagram->CreateDefaultContext();
+
+  systems::Simulator<double> simulator(*diagram, std::move(diagram_context));
+  simulator.set_publish_every_time_step(true);
+  simulator.set_target_realtime_rate(FLAGS_target_realtime_rate);
+  simulator.Initialize();
+//  simulator.AdvanceTo(FLAGS_simulation_time);
+  for (int i = 0; i<100; i++)
+    simulator.AdvanceTo(0.1*i);
+}
+
 }  // namespace eve
 }  // namespace examples
 }  // namespace drake
@@ -93,6 +209,6 @@ int main(int argc, char* argv[]) {
       "A simple dynamic simulation for the Allegro hand moving under constant"
       " torques.");
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  drake::examples::eve::DoMain();
+  drake::examples::eve::DoMain2();
   return 0;
 }
