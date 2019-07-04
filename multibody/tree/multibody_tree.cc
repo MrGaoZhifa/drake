@@ -1060,6 +1060,39 @@ void MultibodyTree<T>::CalcCenterOfMassVelocity(
 }
 
 template <typename T>
+void MultibodyTree<T>::CalcCenterOfMassJacobian(const systems::Context<T>& context,
+                                                EigenPtr<MatrixX<T>> Jcm) const {
+  DRAKE_THROW_UNLESS(Jcm != nullptr);
+  DRAKE_THROW_UNLESS(Jcm->rows() == 3);
+  DRAKE_THROW_UNLESS(Jcm->cols() == 1);
+  DRAKE_THROW_UNLESS(num_bodies() > 1);
+
+  MatrixX<T> MJ = Eigen::MatrixXd::Zero(3, num_velocities());
+  T M = 0;
+
+  // Selected model instances unspecified, use all the bodies in the
+  // multibody_tree. Start from 1 to avoid the world_body.
+  for (BodyIndex body_index(1); body_index < num_bodies(); ++body_index) {
+    const Body<T> &body = get_body(body_index);
+
+    // Calculate M and M * v in world frame.
+    const T &body_mass = body.get_mass(context);
+    M += body_mass;
+
+    Vector3<T> pi_BoBcm_Bo = body.CalcCenterOfMassInBodyFrame(context);
+    (void)pi_BoBcm_Bo;
+    MatrixX<T> Ji = Eigen::MatrixXd::Zero(3, num_velocities());
+    CalcJacobianTranslationalVelocity(
+        context, multibody::JacobianWrtVariable::kV,
+        body.body_frame(), body.body_frame(), pi_BoBcm_Bo, world_frame(),
+        world_frame(), &Ji);
+    MJ += body_mass * Ji;
+  }
+
+  *Jcm = MJ / M;
+}
+
+template <typename T>
 const RigidTransform<T>& MultibodyTree<T>::EvalBodyPoseInWorld(
     const systems::Context<T>& context,
     const Body<T>& body_B) const {

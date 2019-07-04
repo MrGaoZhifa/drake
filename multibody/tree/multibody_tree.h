@@ -1239,6 +1239,10 @@ class MultibodyTree {
                                 model_instances = nullopt) const;
 
   /// See MultibodyPlant method.
+  void CalcCenterOfMassJacobian(const systems::Context<T>& context,
+                                EigenPtr<MatrixX<T>> Jcm) const;
+
+  /// See MultibodyPlant method.
   const math::RigidTransform<T>& EvalBodyPoseInWorld(
       const systems::Context<T>& context,
       const Body<T>& body_B) const;

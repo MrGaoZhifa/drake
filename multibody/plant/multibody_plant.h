@@ -1476,6 +1476,11 @@ class MultibodyPlant : public internal::MultibodyTreeSystem<T> {
                                                     model_instances);
   }
 
+  void CalcCenterOfMassJacobian(const systems::Context<T>& context,
+                                EigenPtr<MatrixX<T>> Jcm) const {
+    internal_tree().CalcCenterOfMassJacobian(context, Jcm);
+  }
+
   /// Evaluate the pose `X_WB` of a body B in the world frame W.
   /// @param[in] context
   ///   The context storing the state of the model.
