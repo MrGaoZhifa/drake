@@ -91,47 +91,88 @@ DEFINE_string(bodyB_type, "sphere",
 
 class JInverse : public systems::LeafSystem<double> {
  public:
+  systems::InputPortIndex com_acceleration_port_index;
+  systems::InputPortIndex base_trajectory_port_index;
+
   JInverse(MultibodyPlant<double>* plant) : plant_(plant) {
-    this->DeclareVectorInputPort(
+    com_acceleration_port_index = this->DeclareVectorInputPort(
         "COM_Acceleration", systems::BasicVector<double>(3));
+    base_trajectory_port_index = this->DeclareVectorInputPort(
+        "base_trajectory", systems::BasicVector<double>(3));
     this->DeclareVectorOutputPort(
-        "Generalized_Acceleration", systems::BasicVector<double>(plant_->num_velocities()),
+        "Generalized_Acceleration", systems::BasicVector<double>(plant_.num_velocities()),
         &JInverse::remap_output);
   }
 
   void remap_output(const systems::Context<double>& context,
                     systems::BasicVector<double>* output_vector) const {
     auto output_value = output_vector->get_mutable_value();
-    auto input_value = this->EvalVectorInput(context, 0)->get_value();
-    drake::log()->info(output_value.transpose());
+    auto com_acceleration_value = this->EvalVectorInput(context, com_acceleration_port_index)->get_value();
+    auto base_trajectory_value = this->EvalVectorInput(context, base_trajectory_port_index)->get_value();
 
-//    output_value = plant_.CalcJacobianAngularVelocity().inverse() * input_value;
-    output_value = Eigen::VectorXd::Zero(plant_->num_velocities());
+    const Eigen::MatrixXd Jcm = plant_.CalcCenterOfMassJacobian(context);
+    const int pris_x_position_index = plant_.GetJointByName("pris_x").position_start();
+
+    Eigen::VectorXd b = com_acceleration_value - Jcm.col(pris_x_position_index);
+    removeColumn(Jcm, pris_x_position_index);
+    Eigen::JacobiSVD<Eigen::MatrixXd> svd(Jcm, Eigen::ComputeThinU | Eigen::ComputeThinV);
+    Eigen::VectorXd theta_ddot_without_base = svd.solve(b);
+
+    const int second_half_size = theta_ddot_without_base.size() - pris_x_position_index;
+    output_value.segment<0>(pris_x_position_index) = theta_ddot_without_base.segment<0>(pris_x_position_index);
+    output_value(pris_x_position_index) = base_trajectory_value(2);
+    output_value.segment<second_half_size>(pris_x_position_index+1) =
+        theta_ddot_without_base.segment<second_half_size>(pris_x_position_index+1);
+  }
+
+  void removeColumn(Eigen::MatrixXd& matrix, int colToRemove) {
+    unsigned int numRows = matrix.rows();
+    unsigned int numCols = matrix.cols()-1;
+
+    if ( colToRemove < numCols )
+      matrix.block(0,colToRemove,numRows,numCols-colToRemove) =
+          matrix.block(0,colToRemove+1,numRows,numCols-colToRemove);
+
+    matrix.conservativeResize(numRows,numCols);
   }
 
  private:
-  MultibodyPlant<double>* plant_;
+  MultibodyPlant<double>& plant_;
 };
 
 class COP2COM : public systems::LeafSystem<double> {
  public:
-  COP2COM() {
-    this->DeclareVectorInputPort(
-        "COM_Acceleration", systems::BasicVector<double>(3));
+  systems::InputPortIndex cop_trajectory_port_index;
+  systems::InputPortIndex mbp_state_port_index;
+
+  COP2COM(MultibodyPlant<double>& plant,
+          ModelInstanceIndex plant_instance, int position_start)
+      : plant_(plant), plant_instance_(plant_instance) {
+    cop_trajectory_port_index = this->DeclareVectorInputPort(
+        "COP_Trajectory", systems::BasicVector<double>(2));
+    mbp_state_port_index = this->DeclareVectorInputPort(
+        "MBP_state", systems::BasicVector<double>(plant_.num_multibody_states()));
     this->DeclareVectorOutputPort(
-        "Generalized_Acceleration", systems::BasicVector<double>(3)),
+        "COM_Acceleration", systems::BasicVector<double>(3)),
         &COP2COM::remap_output);
   }
 
   void remap_output(const systems::Context<double>& context,
                     systems::BasicVector<double>* output_vector) const {
     auto output_value = output_vector->get_mutable_value();
-    auto input_value = this->EvalVectorInput(context, 0)->get_value();
-    drake::log()->info(output_value.transpose());
+    auto cop_trajectory_value = this->EvalVectorInput(context, cop_trajectory_port_index)->get_value();
+    auto mbp_state_value = this->EvalVectorInput(context, mbp_state_port_index)->get_value();
+    auto q_WCcm = plant_.CalcCenterOfMassPosition(context);
 
-//    output_value = plant_.CalcJacobianAngularVelocity().inverse() * input_value;
-    output_value = input_value;
+    output_value(0) = (q_WCcm(0) - cop_trajectory_value(0))
+        * plant_.gravity_field().gravity_vector().norm() / q_WCcm(2);
+    output_value(1) = 0;
+    output_value(2) = 0;
   }
+
+ private:
+  MultibodyPlant<double>& plant_;
+  ModelInstanceIndex plant_instance_;
 };
 
 void DoMain() {
@@ -174,7 +215,7 @@ void DoMain() {
           "pris_x", plant->world_body(), nullopt, eve_root, nullopt,
           Eigen::Vector3d::UnitX());
 
-  plant->AddJointActuator("a_pris_x", pris_x);
+  const JointActuator<double>& a_pris_x = plant->AddJointActuator("a_pris_x", pris_x);
 
   // Now the plant is complete.
   plant->Finalize();
@@ -188,30 +229,22 @@ void DoMain() {
             std::to_string(plant->get_joint(j).velocity_start()));
   }
 
-//  // Create InverseDynamicsController using fake_plant.
-////  const int Q = plant->num_positions();
-////  const int V = plant->num_velocities();
-//  const int U = plant->num_actuators();
-//  const Eigen::VectorXd Kp_ = Eigen::VectorXd::Ones(U) * 0.0;
-//  const Eigen::VectorXd Ki_ = Eigen::VectorXd::Ones(U) * 0.0;
-//  const Eigen::VectorXd Kd_ = Eigen::VectorXd::Ones(U) * 0.0;
-//  auto feed_forward_controller =
-//      builder
-//          .AddSystem<systems::controllers::InverseDynamicsController<double>>(
-//              *plant, Kp_, Ki_, Kd_, false);
-//  builder.Connect(plant->get_state_output_port(), feed_forward_controller->get_input_port_estimated_state());
-//  builder.Connect(feed_forward_controller->get_output_port_control(), plant->get_applied_generalized_force_input_port());
+//  // Create 1 dimensional PID controller for base moving backward and forward.
+//  const int q_desired_dimension = 1;
+//  Eigen::MatrixXd state_projection = Eigen::MatrixXd::Zero(2 * q_desired_dimension, plant->num_multibody_states());
+//  state_projection(0, pris_x.position_start()) = 1;
+//  state_projection(1, pris_x.velocity_start()) = 1;
 //
-//  // Set desired position [q,v]' for IDC as feedback reference.
-//  VectorX<double> constant_pos_value =
-//      VectorX<double>::Ones(plant->num_multibody_states()) * FLAGS_constant_pos;
-//  auto desired_constant_source =
-//      builder.AddSystem<systems::ConstantVectorSource<double>>(
-//          constant_pos_value);
-//  desired_constant_source->set_name("desired_constant_source");
-//  builder.Connect(desired_constant_source->get_output_port(),
-//                  feed_forward_controller->get_input_port_desired_state());
-
+//  const Eigen::VectorXd u_instance = Eigen::VectorXd::Ones(1);
+//  Eigen::MatrixXd output_projection = Eigen::MatrixXd::Zero(plant->num_actuators(), 1 * q_desired_dimension);
+//  a_pris_x.set_actuation_vector(u_instance, &output_projection);
+//
+//  const Eigen::VectorXd Kp_base = Eigen::VectorXd::Ones(1) * 10.0;
+//  const Eigen::VectorXd Ki_base = Eigen::VectorXd::Ones(1) * 0.0;
+//  const Eigen::VectorXd Kd_base = Eigen::VectorXd::Ones(1) * 1.0;
+//  auto base_controller = builder.AddSystem<systems::controllers::PidController>(state_projection, output_projection, Kp_base, Ki_base, Kd_base);
+//  builder.Connect(plant->get_state_output_port(), base_controller->get_input_port_estimated_state());
+//  builder.Connect(base_controller->get_output_port_control(), plant->get_actuation_input_port());
 
   // Zero to the actuation port
   auto zero_force =
@@ -219,51 +252,59 @@ void DoMain() {
   builder.Connect(zero_force->get_output_port(),
                   plant->get_actuation_input_port());
 
-  // Create IDC to convert theta_ddot to Bu.
+  // Create InverseDynamicsController to convert theta_ddot to Bu using plant.
   const int U = plant->num_actuators();
-  const Eigen::VectorXd Kp = Eigen::VectorXd::Ones(U) * 5.0;
+  const Eigen::VectorXd Kp = Eigen::VectorXd::Ones(U) * 0.0;
   const Eigen::VectorXd Ki = Eigen::VectorXd::Ones(U) * 0.0;
   const Eigen::VectorXd Kd = Eigen::VectorXd::Ones(U) * 0.0;
   auto IDC = builder.AddSystem<systems::controllers::InverseDynamicsController<double>>(plant, Kp, Ki, Kd, true);
   builder.Connect(plant->get_state_output_port(), IDC->get_input_port_estimated_state());
   builder.Connect(IDC->get_output_port_control(), plant->get_applied_generalized_force_input_port());
 
+
   // Create a system to transform COM acceleration to Joint acceleration.
   auto j_inverse = builder.AddSystem<JInverse>(plant);
   builder.Connect(j_inverse->get_output_port(0), IDC->get_input_port_desired_acceleration());
 
-  // TODO: Create a trajectory desired state for IDC.
-  // Transform trajectory of base to whole body state and upper body state to zero.
-
-  // TODO: Create a COP to COM transform
-  auto cop2cpm = builder.AddSystem<COP2COM>();
-  builder.Connect(cop2cpm->get_output_port(0), j_inverse->get_input_port(0));
+  // Create a COP to COM transform
+  auto cop2com = builder.AddSystem<COP2COM>(plant, plant_model_instance_index);
+  builder.Connect(cop2com->get_output_port(0), j_inverse->get_input_port(j_inverse->com_acceleration_port_index));
+  builder.Connect(plant->get_state_output_port(), cop2com->get_input_port(cop2com->mbp_state_port_index));
 
   // Design the trajectory to follow.
-  const std::vector<double> kTimes{0.0, 2.0, 5.0, 10.0};
+  const std::vector<double> kTimes{0.0, 10.0};
   std::vector<Eigen::MatrixXd> knots(kTimes.size());
-  Eigen::VectorXd tmp1(3);
-  tmp1 << 0, 0, 0;
-  knots[0] = tmp1;
-  Eigen::VectorXd tmp2(3);
-  tmp2 << 1, 1, 0;
-  knots[1] = tmp2;
-  Eigen::VectorXd tmp3(3);
-  tmp3 << 2, -1, 0;
-  knots[2] = tmp3;
-  Eigen::VectorXd tmp4(3);
-  tmp4 << 3, 0, 0;
-  knots[3] = tmp4;
+  knots[0] = Eigen::Vector3d(0,0,0);
+  knots[1] = Eigen::Vector3d(3,0,0);
   trajectories::PiecewisePolynomial<double> trajectory =
-      trajectories::PiecewisePolynomial<double>::FirstOrderHold(
-          kTimes, knots);
+      trajectories::PiecewisePolynomial<double>::FirstOrderHold(kTimes, knots);
   // Adds a trajectory source for desired state.
   auto traj_src = builder.AddSystem<systems::TrajectorySource<double>>(
       trajectory, 1 /* outputs q + v */);
   traj_src->set_name("trajectory_source");
-
   builder.Connect(traj_src->get_output_port(),
-                  cop2cpm->get_input_port(0));
+                  cop2com->get_input_port(cop2com->cop_trajectory_port_index));
+
+  // Adds a trajectory source for desired base acceleration.
+  auto traj_acc_src = builder.AddSystem<systems::TrajectorySource<double>>(
+      trajectory, 2 /* outputs q + v + a*/);
+  traj_acc_src->set_name("trajectory_acceleration_source");
+  builder.Connect(traj_acc_src->get_output_port(),
+                  j_inverse->get_input_port(j_inverse->base_trajectory_port_index));
+
+
+  // TODO: Create a trajectory desired state for IDC.
+  // For now, just use home configuration as desired state for IDC, the PID parameter is all zero.
+  auto desired_theta =
+      builder.AddSystem<systems::ConstantVectorSource<double>>(Eigen::VectorXd::Zero(plant->num_actuators()));
+  builder.Connect(desired_theta->get_output_port(), IDC->get_input_port_desired_state());
+
+  // TODO: Create the prioritized controller that optimize the desired
+  //  acceleration in order to keep the qd_ddot while make the robot state
+  //  close to home.
+//  // Create a trajectory desired state for PID controller.
+//  // This source is the 1 dimension base state.
+//  builder.Connect(traj_src->get_output_port(), base_controller->get_input_port_desired_state());
 
 
 
