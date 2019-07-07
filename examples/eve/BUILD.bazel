@@ -70,6 +70,7 @@ drake_cc_binary(
         "//multibody/plant:contact_results_to_lcm",
         "//systems/analysis",
         "//systems/controllers",
+        "//systems/framework",
         "//systems/primitives",
         "//systems/rendering:pose_bundle_to_draw_message",
         "@gflags",

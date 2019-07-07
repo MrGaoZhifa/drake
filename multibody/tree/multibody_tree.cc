@@ -990,7 +990,6 @@ void MultibodyTree<T>::CalcCenterOfMassPosition(
       Vector3<T> pi_WBcm = Vector3<T>::Zero(3);
       CalcPointsPositions(context, body.body_frame(), pi_BoBcm, world_frame(),
                           &pi_WBcm);
-
       // Calculate M and M * p in world frame.
       const T &body_mass = body.get_mass(context);
       Mp += body_mass * pi_WBcm;
@@ -1064,7 +1063,7 @@ void MultibodyTree<T>::CalcCenterOfMassJacobian(const systems::Context<T>& conte
                                                 EigenPtr<MatrixX<T>> Jcm) const {
   DRAKE_THROW_UNLESS(Jcm != nullptr);
   DRAKE_THROW_UNLESS(Jcm->rows() == 3);
-  DRAKE_THROW_UNLESS(Jcm->cols() == 1);
+  DRAKE_THROW_UNLESS(Jcm->cols() == num_velocities());
   DRAKE_THROW_UNLESS(num_bodies() > 1);
 
   MatrixX<T> MJ = Eigen::MatrixXd::Zero(3, num_velocities());
@@ -1075,17 +1074,20 @@ void MultibodyTree<T>::CalcCenterOfMassJacobian(const systems::Context<T>& conte
   for (BodyIndex body_index(1); body_index < num_bodies(); ++body_index) {
     const Body<T> &body = get_body(body_index);
 
-    // Calculate M and M * v in world frame.
-    const T &body_mass = body.get_mass(context);
-    M += body_mass;
+    Vector3<T> pi_BoBcm = body.CalcCenterOfMassInBodyFrame(context);
+    Vector3<T> pi_WBcm = Vector3<T>::Zero(3);
+    CalcPointsPositions(context, body.body_frame(), pi_BoBcm, world_frame(),
+                        &pi_WBcm);
 
-    Vector3<T> pi_BoBcm_Bo = body.CalcCenterOfMassInBodyFrame(context);
-    (void)pi_BoBcm_Bo;
     MatrixX<T> Ji = Eigen::MatrixXd::Zero(3, num_velocities());
     CalcJacobianTranslationalVelocity(
         context, multibody::JacobianWrtVariable::kV,
-        body.body_frame(), body.body_frame(), pi_BoBcm_Bo, world_frame(),
+        body.body_frame(), world_frame(), pi_WBcm, world_frame(),
         world_frame(), &Ji);
+
+    // Calculate M and M * v in world frame.
+    const T& body_mass = body.get_mass(context);
+    M += body_mass;
     MJ += body_mass * Ji;
   }
 

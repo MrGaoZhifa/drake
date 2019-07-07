@@ -463,8 +463,11 @@ void DoMain() {
     // Compute the Jacobian of CoM.
     Eigen::MatrixXd Jcm = MJ / Mass;
     drake::log()->info(Jcm);
-
     DRAKE_THROW_UNLESS((Jcm*plant.GetVelocities(plant_context, plant_model_instance_index) - Mv / Mass).norm() < 1e-12);
+
+    Eigen::MatrixXd Jcm_from_function(3, plant.num_velocities());
+    plant.CalcCenterOfMassJacobian(plant_context, &Jcm_from_function);
+    DRAKE_THROW_UNLESS((Jcm - Jcm_from_function).norm() < 1e-12);
   }
 }
 
