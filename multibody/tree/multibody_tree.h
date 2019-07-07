@@ -7,6 +7,7 @@
 #include <tuple>
 #include <type_traits>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -1226,6 +1227,22 @@ class MultibodyTree {
       EigenPtr<MatrixX<T>> p_AQi) const;
 
   /// See MultibodyPlant method.
+  void CalcCenterOfMassPosition(const systems::Context<T>& context,
+                                EigenPtr<Vector3<T>> p_WBcm,
+                                optional<std::unordered_set<ModelInstanceIndex>>
+                                    model_instances = nullopt) const;
+
+  /// See MultibodyPlant method.
+  void CalcCenterOfMassVelocity(const systems::Context<T>& context,
+                                EigenPtr<Vector3<T>> v_WBcm,
+                                optional<std::unordered_set<ModelInstanceIndex>>
+                                model_instances = nullopt) const;
+
+  /// See MultibodyPlant method.
+  void CalcCenterOfMassJacobian(const systems::Context<T>& context,
+                                EigenPtr<MatrixX<T>> Jcm) const;
+
+  /// See MultibodyPlant method.
   const math::RigidTransform<T>& EvalBodyPoseInWorld(
       const systems::Context<T>& context,
       const Body<T>& body_B) const;
@@ -1268,8 +1285,10 @@ class MultibodyTree {
   /// See MultibodyPlant method.
   void CalcPointsAnalyticalJacobianExpressedInWorld(
       const systems::Context<T>& context,
-      const Frame<T>& frame_F, const Eigen::Ref<const MatrixX<T>>& p_FP_list,
-      EigenPtr<MatrixX<T>> p_WP_list, EigenPtr<MatrixX<T>> Jq_WFp) const;
+      const Frame<T>& frame_F,
+      const Eigen::Ref<const MatrixX<T>>& p_FP_list,
+      EigenPtr<MatrixX<T>> p_WP_list,
+      EigenPtr<MatrixX<T>> Jq_WFp) const;
 
   /// See MultibodyPlant method.
   void CalcFrameGeometricJacobianExpressedInWorld(

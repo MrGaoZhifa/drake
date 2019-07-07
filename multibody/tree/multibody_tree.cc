@@ -944,6 +944,155 @@ void MultibodyTree<T>::CalcPointsPositions(
 }
 
 template <typename T>
+void MultibodyTree<T>::CalcCenterOfMassPosition(
+    const systems::Context<T>& context, EigenPtr<Vector3<T>> p_WBcm,
+    optional<std::unordered_set<ModelInstanceIndex>> model_instances) const {
+  DRAKE_THROW_UNLESS(p_WBcm != nullptr);
+  DRAKE_THROW_UNLESS(p_WBcm->rows() == 3);
+  DRAKE_THROW_UNLESS(p_WBcm->cols() == 1);
+  DRAKE_THROW_UNLESS(num_bodies() > 1);
+
+  Vector3<T> Mp = Vector3<T>::Zero();
+  T M = 0;
+
+  // Selected model instances specified.
+  if (model_instances && !model_instances->empty()) {
+    for (auto model_instance : *model_instances) {
+      // TODO(Zhaoyuan): Consider how to report meaningful error if
+      // model_instance is invalid.
+      DRAKE_THROW_UNLESS(model_instance != world_model_instance());
+      DRAKE_THROW_UNLESS(instance_index_to_name_.count(model_instance) != 0);
+    }
+
+    for (auto model_instance : *model_instances) {
+      std::vector<BodyIndex> body_indexes = GetBodyIndices(model_instance);
+      for (BodyIndex body_index : body_indexes) {
+        const Body<T>& body = get_body(body_index);
+
+        Vector3<T> pi_BoBcm = body.CalcCenterOfMassInBodyFrame(context);
+        Vector3<T> pi_WBcm = Vector3<T>::Zero(3);
+        CalcPointsPositions(context, body.body_frame(), pi_BoBcm, world_frame(),
+                            &pi_WBcm);
+
+        // Calculate M and M * p in world frame.
+        const T& body_mass = body.get_mass(context);
+        Mp += body_mass * pi_WBcm;
+        M += body_mass;
+      }
+    }
+  } else {
+    // Selected model instances unspecified, use all the bodies in the
+    // multibody_tree. Start from 1 to avoid the world_body.
+    for (BodyIndex body_index(1); body_index < num_bodies(); ++body_index) {
+      const Body<T> &body = get_body(body_index);
+
+      Vector3<T> pi_BoBcm = body.CalcCenterOfMassInBodyFrame(context);
+      Vector3<T> pi_WBcm = Vector3<T>::Zero(3);
+      CalcPointsPositions(context, body.body_frame(), pi_BoBcm, world_frame(),
+                          &pi_WBcm);
+
+      // Calculate M and M * p in world frame.
+      const T &body_mass = body.get_mass(context);
+      Mp += body_mass * pi_WBcm;
+      M += body_mass;
+    }
+  }
+  p_WBcm->template topRows<3>() = Mp / M;
+}
+
+template <typename T>
+void MultibodyTree<T>::CalcCenterOfMassVelocity(
+    const systems::Context<T>& context, EigenPtr<Vector3<T>> v_WBcm,
+    optional<std::unordered_set<ModelInstanceIndex>> model_instances) const {
+  DRAKE_THROW_UNLESS(v_WBcm != nullptr);
+  DRAKE_THROW_UNLESS(v_WBcm->rows() == 3);
+  DRAKE_THROW_UNLESS(v_WBcm->cols() == 1);
+  DRAKE_THROW_UNLESS(num_bodies() > 1);
+
+  Vector3<T> Mv = Vector3<T>::Zero();
+  T M = 0;
+
+  // Selected model instances specified.
+  if (model_instances && !model_instances->empty()) {
+    for (auto model_instance : *model_instances) {
+      // TODO(Zhaoyuan): Consider how to report meaningful error if
+      // model_instance is invalid.
+      DRAKE_THROW_UNLESS(model_instance != world_model_instance());
+      DRAKE_THROW_UNLESS(instance_index_to_name_.count(model_instance) != 0);
+    }
+
+    for (auto model_instance : *model_instances) {
+      std::vector<BodyIndex> body_indexes = GetBodyIndices(model_instance);
+      for (BodyIndex body_index : body_indexes) {
+        const Body<T>& body = get_body(body_index);
+
+        Vector3<T> pi_BoBcm_Bo = body.CalcCenterOfMassInBodyFrame(context);
+
+        // Calculate M and M * v in world frame.
+        const T& body_mass = body.get_mass(context);
+        Mv += body_mass *
+            body.EvalSpatialVelocityInWorld(context)
+                .Shift(body.EvalPoseInWorld(context).rotation().matrix() *
+                    pi_BoBcm_Bo) // Transform pi_BoBcm_Bo to pi_BoBcm_W.
+                .translational();
+        M += body_mass;
+      }
+    }
+  } else {
+    // Selected model instances unspecified, use all the bodies in the
+    // multibody_tree. Start from 1 to avoid the world_body.
+    for (BodyIndex body_index(1); body_index < num_bodies(); ++body_index) {
+      const Body<T> &body = get_body(body_index);
+
+      Vector3<T> pi_BoBcm_Bo = body.CalcCenterOfMassInBodyFrame(context);
+
+      // Calculate M and M * v in world frame.
+      const T &body_mass = body.get_mass(context);
+      Mv += body_mass *
+            body.EvalSpatialVelocityInWorld(context)
+                .Shift(body.EvalPoseInWorld(context).rotation().matrix() *
+                       pi_BoBcm_Bo) // Transform pi_BoBcm_Bo to pi_BoBcm_W.
+                .translational();
+      M += body_mass;
+    }
+  }
+  v_WBcm->template topRows<3>() = Mv / M;
+}
+
+template <typename T>
+void MultibodyTree<T>::CalcCenterOfMassJacobian(const systems::Context<T>& context,
+                                                EigenPtr<MatrixX<T>> Jcm) const {
+  DRAKE_THROW_UNLESS(Jcm != nullptr);
+  DRAKE_THROW_UNLESS(Jcm->rows() == 3);
+  DRAKE_THROW_UNLESS(Jcm->cols() == 1);
+  DRAKE_THROW_UNLESS(num_bodies() > 1);
+
+  MatrixX<T> MJ = Eigen::MatrixXd::Zero(3, num_velocities());
+  T M = 0;
+
+  // Selected model instances unspecified, use all the bodies in the
+  // multibody_tree. Start from 1 to avoid the world_body.
+  for (BodyIndex body_index(1); body_index < num_bodies(); ++body_index) {
+    const Body<T> &body = get_body(body_index);
+
+    // Calculate M and M * v in world frame.
+    const T &body_mass = body.get_mass(context);
+    M += body_mass;
+
+    Vector3<T> pi_BoBcm_Bo = body.CalcCenterOfMassInBodyFrame(context);
+    (void)pi_BoBcm_Bo;
+    MatrixX<T> Ji = Eigen::MatrixXd::Zero(3, num_velocities());
+    CalcJacobianTranslationalVelocity(
+        context, multibody::JacobianWrtVariable::kV,
+        body.body_frame(), body.body_frame(), pi_BoBcm_Bo, world_frame(),
+        world_frame(), &Ji);
+    MJ += body_mass * Ji;
+  }
+
+  *Jcm = MJ / M;
+}
+
+template <typename T>
 const RigidTransform<T>& MultibodyTree<T>::EvalBodyPoseInWorld(
     const systems::Context<T>& context,
     const Body<T>& body_B) const {
@@ -987,6 +1136,8 @@ void MultibodyTree<T>::CalcAcrossNodeGeometricJacobianExpressedInWorld(
   }
 }
 
+// TODO(Mitiguy) Delete this method as per issue #10155.
+// DRAKE_DEPRECATED("2019-10-01", "Use CalcJacobianTranslationalVelocity().")
 template <typename T>
 void MultibodyTree<T>::CalcPointsGeometricJacobianExpressedInWorld(
     const systems::Context<T>& context,
@@ -994,14 +1145,14 @@ void MultibodyTree<T>::CalcPointsGeometricJacobianExpressedInWorld(
     const Eigen::Ref<const MatrixX<T>>& p_FP_list,
     EigenPtr<MatrixX<T>> p_WP_list,
     EigenPtr<MatrixX<T>> Jv_WFp) const {
-  // TODO(Mitiguy) Delete this method as per issue #10155.
-  // DRAKE_DEPRECATED("2019-10-01", "Use CalcJacobianTranslationalVelocity().")
   const int num_points = p_FP_list.cols();
   DRAKE_THROW_UNLESS(p_WP_list != nullptr);
   DRAKE_THROW_UNLESS(p_WP_list->cols() == num_points);
 
+  // For each point Fi, calculate Fi's position from Wo (World origin),
+  // expressed in world W.
   const Frame<T>& frame_W = world_frame();
-  CalcPointsPositions(context, frame_F, p_FP_list,  /* From frame F */
+  CalcPointsPositions(context, frame_F, p_FP_list,      /* From frame F */
                       frame_W, p_WP_list);          /* To world frame W */
   CalcJacobianTranslationalVelocity(context,
                                     JacobianWrtVariable::kV,
@@ -1013,26 +1164,33 @@ void MultibodyTree<T>::CalcPointsGeometricJacobianExpressedInWorld(
                                     Jv_WFp);
 }
 
+// TODO(Mitiguy) Delete this method as per issue #10155.
+// DRAKE_DEPRECATED("2019-10-01", "Use CalcJacobianTranslationalVelocity().")
 template <typename T>
 void MultibodyTree<T>::CalcPointsAnalyticalJacobianExpressedInWorld(
     const systems::Context<T>& context,
-    const Frame<T>& frame_F, const Eigen::Ref<const MatrixX<T>>& p_FP_list,
-    EigenPtr<MatrixX<T>> p_WP_list, EigenPtr<MatrixX<T>> Jq_WFp) const {
-  DRAKE_THROW_UNLESS(p_FP_list.rows() == 3);
+    const Frame<T>& frame_F,
+    const Eigen::Ref<const MatrixX<T>>& p_FP_list,
+    EigenPtr<MatrixX<T>> p_WP_list,
+    EigenPtr<MatrixX<T>> Jq_WFp) const {
   const int num_points = p_FP_list.cols();
   DRAKE_THROW_UNLESS(p_WP_list != nullptr);
   DRAKE_THROW_UNLESS(p_WP_list->cols() == num_points);
-  DRAKE_THROW_UNLESS(Jq_WFp != nullptr);
-  DRAKE_THROW_UNLESS(Jq_WFp->rows() == 3 * num_points);
-  DRAKE_THROW_UNLESS(Jq_WFp->cols() == num_positions());
 
-  // Compute p_WPi for each point Pi in the set p_FP_list.
-  CalcPointsPositions(context,
-                      frame_F, p_FP_list,        /* From frame F */
-                      world_frame(), p_WP_list); /* To world frame W */
+  // For each point Fi, calculate Fi's position from Wo (World origin),
+  // expressed in world W.
+  const Frame<T>& frame_W = world_frame();
+  CalcPointsPositions(context, frame_F, p_FP_list,     /* From frame F */
+                      frame_W, p_WP_list);         /* To world frame W */
 
-  CalcFrameJacobianExpressedInWorld(context, frame_F, *p_WP_list,
-      JacobianWrtVariable::kQDot, nullptr /* angular not needed */, Jq_WFp);
+  CalcJacobianTranslationalVelocity(context,
+                                    JacobianWrtVariable::kQDot,
+                                    frame_F,
+                                    frame_W,
+                                    *p_WP_list,
+                                    frame_W,
+                                    frame_W,
+                                    Jq_WFp);
 }
 
 template <typename T>
@@ -1122,14 +1280,14 @@ VectorX<T> MultibodyTree<T>::CalcBiasForJacobianTranslationalVelocity(
   return Abias_WFp_array;
 }
 
+// TODO(Mitiguy) Delete this method as per issue #10155.
+// DRAKE_DEPRECATED("2019-10-01", "Use CalcJacobianTranslationalVelocity().")
 template <typename T>
 void MultibodyTree<T>::CalcPointsGeometricJacobianExpressedInWorld(
     const systems::Context<T>& context,
     const Frame<T>& frame_F,
     const Eigen::Ref<const MatrixX<T>>& p_WP_list,
     EigenPtr<MatrixX<T>> Jv_WFp) const {
-  // TODO(Mitiguy) Delete this method as per issue #10155.
-  // DRAKE_DEPRECATED("2019-10-01", "Use CalcJacobianTranslationalVelocity().")
   const Frame<T>& frame_W = world_frame();
   CalcJacobianTranslationalVelocity(context,
                                     JacobianWrtVariable::kV,
@@ -1286,14 +1444,14 @@ void MultibodyTree<T>::CalcJacobianTranslationalVelocityHelper(
     const Frame<T>& frame_B,
     const Eigen::Ref<const Matrix3X<T>>& p_WoBi_W,
     const Frame<T>& frame_A,
-    EigenPtr<MatrixX<T>> Js_v_ABi_E) const {
+    EigenPtr<MatrixX<T>> Js_v_ABi_W) const {
   const int num_columns = (with_respect_to == JacobianWrtVariable::kQDot) ?
                           num_positions() : num_velocities();
   const int num_points = p_WoBi_W.cols();
   DRAKE_THROW_UNLESS(num_points > 0);
-  DRAKE_THROW_UNLESS(Js_v_ABi_E != nullptr);
-  DRAKE_THROW_UNLESS(Js_v_ABi_E->rows() == 3 * num_points);
-  DRAKE_THROW_UNLESS(Js_v_ABi_E->cols() == num_columns);
+  DRAKE_THROW_UNLESS(Js_v_ABi_W != nullptr);
+  DRAKE_THROW_UNLESS(Js_v_ABi_W->rows() == 3 * num_points);
+  DRAKE_THROW_UNLESS(Js_v_ABi_W->cols() == num_columns);
 
   // Bi's velocity in W can be calculated v_WBi = v_WAi + v_ABi, where
   // v_WBi is point Bi's translational velocity in world W,
@@ -1317,7 +1475,7 @@ void MultibodyTree<T>::CalcJacobianTranslationalVelocityHelper(
 
   // Calculate each point Bi's translational velocity Jacobian in frame A,
   // expressed in world W.
-  *Js_v_ABi_E = Js_v_WBi_W - Js_v_WAi_W;  // This calculates Js_v_ABi_W.
+  *Js_v_ABi_W = Js_v_WBi_W - Js_v_WAi_W;  // This calculates Js_v_ABi_W.
 }
 
 template <typename T>

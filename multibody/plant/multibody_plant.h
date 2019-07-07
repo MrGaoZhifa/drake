@@ -1442,6 +1442,45 @@ class MultibodyPlant : public internal::MultibodyTreeSystem<T> {
         context, frame_B, p_BQi, frame_A, p_AQi);
   }
 
+  /// This method computes the Center of Mass position of specific model
+  /// instances with respect to world frame. The models are selected by set of
+  /// model instances `model_instances`. If no model_instances provided, the
+  /// function will consider all the bodies in `MultibodyPlant`.
+  ///
+  /// @param[in] context
+  ///   The context containing the state of the model. It stores the
+  ///   generalized positions q of the model.
+  /// @param[out] p_WBcm
+  ///   The output position of Center of Mass. The output `p_WBcm` **must** have
+  ///   three rows.
+  /// @param[in] model_instances
+  ///   The set selected model instances. If no model instance is select, aka
+  ///   the model_instances is left empty, the method returns the position of
+  ///   Center of Mass for all the bodies in the MultibodyPlant.
+  ///
+  /// @note model_instances should not include world_model_instance.
+  /// model_instances should exist in the MultibodyPlant.
+  void CalcCenterOfMassPosition(const systems::Context<T>& context,
+                                EigenPtr<Vector3<T>> p_WBcm,
+                                optional<std::unordered_set<ModelInstanceIndex>>
+                                    model_instances = nullopt) const {
+    return internal_tree().CalcCenterOfMassPosition(context, p_WBcm,
+                                                    model_instances);
+  }
+
+  void CalcCenterOfMassVelocity(const systems::Context<T>& context,
+                                EigenPtr<Vector3<T>> v_WBcm,
+                                optional<std::unordered_set<ModelInstanceIndex>>
+                                model_instances = nullopt) const {
+    return internal_tree().CalcCenterOfMassVelocity(context, v_WBcm,
+                                                    model_instances);
+  }
+
+  void CalcCenterOfMassJacobian(const systems::Context<T>& context,
+                                EigenPtr<MatrixX<T>> Jcm) const {
+    internal_tree().CalcCenterOfMassJacobian(context, Jcm);
+  }
+
   /// Evaluate the pose `X_WB` of a body B in the world frame W.
   /// @param[in] context
   ///   The context storing the state of the model.
@@ -1734,10 +1773,13 @@ class MultibodyPlant : public internal::MultibodyTreeSystem<T> {
   // TODO(amcastro-tri): provide the Jacobian-times-vector operation, since for
   // most applications it is all we need and it is more efficient to compute.
   // TODO(amcastro-tri): Rework this method as per issue #10155.
+  DRAKE_DEPRECATED("2019-10-01", "Use CalcJacobianTranslationalVelocity().")
   void CalcPointsAnalyticalJacobianExpressedInWorld(
       const systems::Context<T>& context,
-      const Frame<T>& frame_F, const Eigen::Ref<const MatrixX<T>>& p_FP_list,
-      EigenPtr<MatrixX<T>> p_WP_list, EigenPtr<MatrixX<T>> Jq_WFp) const {
+      const Frame<T>& frame_F,
+      const Eigen::Ref<const MatrixX<T>>& p_FP_list,
+      EigenPtr<MatrixX<T>> p_WP_list,
+      EigenPtr<MatrixX<T>> Jq_WFp) const {
     internal_tree().CalcPointsAnalyticalJacobianExpressedInWorld(
         context, frame_F, p_FP_list, p_WP_list, Jq_WFp);
   }
