@@ -32,6 +32,9 @@
 #include "drake/systems/controllers/linear_quadratic_regulator.h"
 #include "drake/systems/primitives/trajectory_source.h"
 #include "drake/systems/framework/leaf_system.h"
+#include "drake/examples/eve/eve_common.h"
+#include "drake/lcmt_viewer_draw.hpp"
+#include "drake/examples/eve/eve_common.h"
 
 namespace drake {
 namespace examples {
@@ -115,6 +118,7 @@ class JInverse : public systems::LeafSystem<double> {
     auto output_value = output_vector->get_mutable_value();
     auto com_acceleration_value = this->EvalVectorInput(context, com_acceleration_port_index)->get_value();
     auto base_trajectory_value = this->EvalVectorInput(context, base_trajectory_port_index)->get_value();
+    drake::log()->info(base_trajectory_value.transpose());
 
     // Calculate Jacobian.
 //    const Eigen::MatrixXd Jcm = plant_.CalcCenterOfMassJacobian(context);
@@ -161,8 +165,8 @@ class COP2COM : public systems::LeafSystem<double> {
   systems::Context<double>* plant_context_;
 
   COP2COM(MultibodyPlant<double>& plant,
-          ModelInstanceIndex plant_instance)
-      : plant_(plant), plant_instance_(plant_instance) {
+          ModelInstanceIndex plant_instance, lcm::DrakeLcm& lcm)
+      : plant_(plant), plant_instance_(plant_instance), lcm_(lcm) {
     cop_trajectory_port_index = this->DeclareVectorInputPort(
         "COP_Trajectory", systems::BasicVector<double>(6)).get_index();
     mbp_state_port_index = this->DeclareVectorInputPort(
@@ -170,6 +174,7 @@ class COP2COM : public systems::LeafSystem<double> {
     this->DeclareVectorOutputPort(
         "COM_Acceleration", systems::BasicVector<double>(3),
         &COP2COM::remap_output);
+    DeclarePeriodicPublishEvent(0.05, 0, &COP2COM::MyPublishHandler);
   }
 
   void remap_output(const systems::Context<double>& context,
@@ -182,7 +187,7 @@ class COP2COM : public systems::LeafSystem<double> {
 //    auto q_WCcm = plant_.CalcCenterOfMassPosition(context);
     Eigen::Vector3d p_WBcm;
     plant_.CalcCenterOfMassPosition(*plant_context_, &p_WBcm);
-    drake::log()->info(p_WBcm.transpose());
+//    drake::log()->info(p_WBcm.transpose());
 
     output_value(0) = (p_WBcm(0) - cop_trajectory_value(0))
         * plant_.gravity_field().gravity_vector().norm() / p_WBcm(2);
@@ -194,6 +199,53 @@ class COP2COM : public systems::LeafSystem<double> {
  private:
   MultibodyPlant<double>& plant_;
   ModelInstanceIndex plant_instance_;
+  lcm::DrakeLcm& lcm_;
+
+  systems::EventStatus MyPublishHandler(const systems::Context<double>& context) const {
+    Plot(context);
+    return systems::EventStatus::Succeeded();
+  }
+
+  void Plot(const systems::Context<double>& context) const {
+    auto cop_trajectory_value = this->EvalVectorInput(context, cop_trajectory_port_index)->get_value();
+
+    Eigen::Vector3d p_WBcm;
+    plant_.CalcCenterOfMassPosition(*plant_context_, &p_WBcm);
+
+    std::vector<std::string> names;
+    std::vector<Eigen::Isometry3d> poses;
+
+    // Visualize reference ZMP position.
+    names.push_back("Ref_ZMP_" + std::to_string(context.get_time()));
+    Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
+    pose.translation() = cop_trajectory_value.head(3);
+    poses.push_back(pose);
+
+
+//    names.push_back("Real_ZMP_" + std::to_string(context.get_time()));
+//    pose.translation() = Eigen::Vector3d(p_WBcm(0)-  / plant_.gravity_field().gravity_vector().norm() * p_WBcm(2) , , 0);
+
+    // Visualize CoM position.
+    names.push_back("COM_" + std::to_string(context.get_time()));
+    pose.translation() = p_WBcm;
+    poses.push_back(pose);
+
+    PublishFramesToLcm("DRAKE_DRAW_FRAMES", poses, names, &lcm_);
+    // Visualize expected CoM acceleration.
+    Eigen::Vector3d a_cm_expected;
+    a_cm_expected(0) = (p_WBcm(0) - cop_trajectory_value(0))
+        * plant_.gravity_field().gravity_vector().norm() / p_WBcm(2);
+    a_cm_expected(1) = (p_WBcm(1) - cop_trajectory_value(1))
+        * plant_.gravity_field().gravity_vector().norm() / p_WBcm(2);;
+    a_cm_expected(2) = 0;
+
+    std::vector<Eigen::VectorXd> contact_points;
+    std::vector<Eigen::VectorXd> contact_forces;
+    contact_points.push_back(p_WBcm);
+    contact_forces.push_back(a_cm_expected);
+
+    PublishContactToLcm(contact_points, contact_forces, &lcm_);
+  }
 };
 
 void DoMain() {
@@ -289,17 +341,23 @@ void DoMain() {
   builder.Connect(j_inverse->get_output_port(0), IDC->get_input_port_desired_acceleration());
 
   // Create a COP to COM transform
-  auto cop2com = builder.AddSystem<COP2COM>(*plant, plant_model_instance_index);
+  lcm::DrakeLcm lcm;
+  auto cop2com = builder.AddSystem<COP2COM>(*plant, plant_model_instance_index, lcm);
   builder.Connect(cop2com->get_output_port(0), j_inverse->get_input_port(j_inverse->com_acceleration_port_index));
   builder.Connect(plant->get_state_output_port(), cop2com->get_input_port(cop2com->mbp_state_port_index));
 
   // Design the trajectory to follow.
-  const std::vector<double> kTimes{0.0, 10.0};
+  const std::vector<double> kTimes{0.0, 3.0};
   std::vector<Eigen::MatrixXd> knots(kTimes.size());
   knots[0] = Eigen::Vector3d(0,0,0);
   knots[1] = Eigen::Vector3d(3,0,0);
+//  trajectories::PiecewisePolynomial<double> trajectory =
+//      trajectories::PiecewisePolynomial<double>::FirstOrderHold(kTimes, knots);
+  Eigen::VectorXd knot_dot_start = Eigen::VectorXd::Zero(3);
+  Eigen::MatrixXd knot_dot_end = Eigen::VectorXd::Zero(3);
   trajectories::PiecewisePolynomial<double> trajectory =
-      trajectories::PiecewisePolynomial<double>::FirstOrderHold(kTimes, knots);
+      trajectories::PiecewisePolynomial<double>::Cubic(
+          kTimes, knots, knot_dot_start, knot_dot_end);
   // Adds a trajectory source for desired state.
   auto traj_src = builder.AddSystem<systems::TrajectorySource<double>>(
       trajectory, 1 /* outputs q + v */);
@@ -350,14 +408,15 @@ void DoMain() {
   j_inverse->plant_context_ = &plant_context_real;
 
 //  // Set the robot COM position, make sure the robot base is off the ground.
-//  Eigen::VectorXd positions = Eigen::VectorXd::Zero(plant->num_positions());
-//  positions[0] = 30;
-//  plant->SetPositions(plant_context.get(), positions);
+  Eigen::VectorXd positions = Eigen::VectorXd::Zero(plant->num_positions());
+  positions[plant->GetJointByName("j_hip_y").position_start()] = 0.43;
+  positions[plant->GetJointByName("j_knee_y").position_start()] = -0.91;
+  positions[plant->GetJointByName("j_ankle_y").position_start()] = 0.47;
+  plant->SetPositions(&plant_context_real, positions);
 
-//  // Set robot init velocity for every joint.
-//  drake::VectorX<double> velocities =
-//      Eigen::VectorXd::Ones(plant->num_velocities()) * -0.1;
-//  plant->SetVelocities(&plant_context, velocities);
+  // Set robot init velocity for every joint.
+  drake::VectorX<double> velocities = Eigen::VectorXd::Zero(plant->num_velocities());
+  plant->SetVelocities(&plant_context_real, velocities);
 
   // Set up simulator.
   drake::log()->info("\nNow starts Simulation\n");

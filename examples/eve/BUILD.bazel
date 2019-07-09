@@ -59,6 +59,7 @@ drake_cc_binary(
         "//manipulation/models/qb_hand_description:models",
     ],
     deps = [
+        ":eve_common",
         "//common:find_resource",
         "//common:text_logging_gflags",
         "//geometry:geometry_visualization",
