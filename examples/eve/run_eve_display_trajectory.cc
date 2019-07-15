@@ -206,7 +206,7 @@ void DoMain2() {
     simulator.AdvanceTo(0.1*i);
 }
 
-// Visualize the
+// Visualize the trajectory of zmp and com based on foot placement.
 void DoMain3() {
   std::vector<Eigen::Vector2d> footsteps = {
       Eigen::Vector2d(0, 0),    Eigen::Vector2d(0.5, 0.1),
@@ -249,6 +249,55 @@ void DoMain3() {
   PublishFramesToLcm("DRAKE_DRAW_FRAMES", poses, names, &lcm);
 }
 
+// Visualize the trajectory of zmp and com based on base trajectory.
+// The method verified.
+void DoMain4() {
+
+  // Design the trajectory to follow.
+  const std::vector<double> kTimes{0.0, 1.0, 2.0, 3.0, 3.01};
+  std::vector<Eigen::MatrixXd> knots(kTimes.size());
+  knots[0] = Eigen::Vector2d(0,0);
+  knots[1] = Eigen::Vector2d(0.5,-1.0);
+  knots[2] = Eigen::Vector2d(2.5,1.0);
+  knots[3] = Eigen::Vector2d(3,0);
+  knots[4] = Eigen::Vector2d(3,0);
+//  Eigen::VectorXd knot_dot_start = Eigen::VectorXd::Zero(2);
+//  Eigen::MatrixXd knot_dot_end = Eigen::VectorXd::Zero(2);
+
+  trajectories::PiecewisePolynomial<double> trajectory =
+      trajectories::PiecewisePolynomial<double>::Pchip(kTimes, knots);
+
+  Eigen::Vector4d x0(0, 0, 0, 0);
+  const double z = 0.6;
+  systems::controllers::ZMPPlanner zmp_planner;
+  zmp_planner.Plan(trajectory, x0, z);
+
+  double sample_dt = 0.01;
+
+  systems::controllers::ZMPTestTraj result =
+      systems::controllers::SimulateZMPPolicy(zmp_planner, x0, sample_dt, 2);
+
+  lcm::DrakeLcm lcm;
+
+  std::vector<std::string> names;
+  std::vector<Eigen::Isometry3d> poses;
+  const int N = result.time.size();
+  for (int t = 0; t < N; t=t+3) {
+    names.push_back("CoM" + std::to_string(int(t)));
+    Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
+    pose.translation() = Eigen::Vector3d(result.nominal_com(0, t), result.nominal_com(1, t), z);
+    poses.push_back(pose);
+  }
+  for (int t = 0; t < N; t=t+3) {
+    names.push_back("ZMP" + std::to_string(int(t)));
+    Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
+    pose.translation() = Eigen::Vector3d(result.desired_zmp(0, t), result.desired_zmp(1, t), 0);
+    poses.push_back(pose);
+  }
+
+  PublishFramesToLcm("DRAKE_DRAW_FRAMES", poses, names, &lcm);
+}
+
 }  // namespace eve
 }  // namespace examples
 }  // namespace drake
@@ -258,6 +307,6 @@ int main(int argc, char* argv[]) {
       "A simple dynamic simulation for the Allegro hand moving under constant"
       " torques.");
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  drake::examples::eve::DoMain3();
+  drake::examples::eve::DoMain4();
   return 0;
 }

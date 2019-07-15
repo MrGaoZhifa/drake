@@ -35,6 +35,7 @@
 #include "drake/examples/eve/eve_common.h"
 #include "drake/lcmt_viewer_draw.hpp"
 #include "drake/examples/eve/eve_common.h"
+#include "drake/systems/controllers/test/zmp_test_util.h"
 
 namespace drake {
 namespace examples {
@@ -48,7 +49,7 @@ DEFINE_double(constant_pos, 0.0,
               "Suggested load is in the order of 0.01 Nm. When input value"
               "equals to 0 (default), the program runs a passive simulation.");
 
-DEFINE_double(simulation_time, 3,
+DEFINE_double(simulation_time, 4,
               "Desired duration of the simulation in seconds");
 
 DEFINE_bool(use_right_hand, true,
@@ -347,17 +348,16 @@ void DoMain() {
   builder.Connect(plant->get_state_output_port(), cop2com->get_input_port(cop2com->mbp_state_port_index));
 
   // Design the trajectory to follow.
-  const std::vector<double> kTimes{0.0, 3.0};
+  const std::vector<double> kTimes{0.0, 2.0, 4.0};
   std::vector<Eigen::MatrixXd> knots(kTimes.size());
   knots[0] = Eigen::Vector3d(0,0,0);
-  knots[1] = Eigen::Vector3d(3,0,0);
+  knots[1] = Eigen::Vector3d(1,0,0);
+  knots[2] = Eigen::Vector3d(2,0,0);
 //  trajectories::PiecewisePolynomial<double> trajectory =
 //      trajectories::PiecewisePolynomial<double>::FirstOrderHold(kTimes, knots);
-  Eigen::VectorXd knot_dot_start = Eigen::VectorXd::Zero(3);
-  Eigen::MatrixXd knot_dot_end = Eigen::VectorXd::Zero(3);
   trajectories::PiecewisePolynomial<double> trajectory =
-      trajectories::PiecewisePolynomial<double>::Cubic(
-          kTimes, knots, knot_dot_start, knot_dot_end);
+      trajectories::PiecewisePolynomial<double>::Pchip(kTimes, knots);
+
   // Adds a trajectory source for desired state.
   auto traj_src = builder.AddSystem<systems::TrajectorySource<double>>(
       trajectory, 1 /* outputs q + v */);
