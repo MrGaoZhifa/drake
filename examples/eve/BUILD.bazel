@@ -80,6 +80,7 @@ drake_cc_binary(
 
 drake_cc_binary(
     name = "run_eve_display_trajectory",
+    testonly = 1,
     srcs = ["run_eve_display_trajectory.cc"],
     data = [
         "//manipulation/models/eve:models",
@@ -98,6 +99,7 @@ drake_cc_binary(
         "//multibody/plant:contact_results_to_lcm",
         "//systems/analysis",
         "//systems/controllers",
+        "//systems/controllers:zmp_test_util",
         "//systems/framework",
         "//systems/primitives",
         "//systems/rendering:pose_bundle_to_draw_message",

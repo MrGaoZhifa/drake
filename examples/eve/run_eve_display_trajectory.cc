@@ -12,6 +12,9 @@ PublishFramesToLcm("DRAKE_DRAW_TRAJECTORY", {
 
 #include <gflags/gflags.h>
 
+#include <chrono>
+#include <thread>
+
 #include "drake/common/drake_assert.h"
 #include "drake/common/text_logging_gflags.h"
 #include "drake/geometry/geometry_visualization.h"
@@ -26,6 +29,7 @@ PublishFramesToLcm("DRAKE_DRAW_TRAJECTORY", {
 #include "drake/examples/eve/eve_common.h"
 #include "drake/systems/primitives/trajectory_source.h"
 #include "drake/systems/framework/event_status.h"
+#include "drake/systems/controllers/test/zmp_test_util.h"
 
 DEFINE_double(target_realtime_rate, 1.0,
               "Rate at which to run the simulation, relative to realtime");
@@ -133,6 +137,7 @@ void DoMain() {
   }
   lcm::DrakeLcm lcm;
 
+  // Send Trajectory frame to viz.
   //  std::vector<std::string> names = {"X_WF", "X_WG"};
   //  Eigen::Isometry3d pose1 = Eigen::Isometry3d::Identity();
   //  pose1.translation() = Eigen::Vector3d::Ones()*0.5;
@@ -143,6 +148,7 @@ void DoMain() {
 
   PublishFramesToLcm("DRAKE_DRAW_FRAMES", poses, names, &lcm);
 
+  // Send Trajectory arrow to viz.
   std::vector<Eigen::VectorXd> contact_points;
   std::vector<Eigen::VectorXd> contact_forces;
   contact_points.push_back(Eigen::VectorXd::Zero(3));
@@ -200,6 +206,49 @@ void DoMain2() {
     simulator.AdvanceTo(0.1*i);
 }
 
+// Visualize the
+void DoMain3() {
+  std::vector<Eigen::Vector2d> footsteps = {
+      Eigen::Vector2d(0, 0),    Eigen::Vector2d(0.5, 0.1),
+      Eigen::Vector2d(1, -0.1), Eigen::Vector2d(1.5, 0.1),
+      Eigen::Vector2d(2, -0.1), Eigen::Vector2d(2.5, 0)};
+
+  std::vector<trajectories::PiecewisePolynomial<double>> zmp_trajs =
+      systems::controllers::GenerateDesiredZMPTrajs(footsteps, 0.5, 1);
+
+  Eigen::Vector4d x0(0, 0, 0, 0);
+  double z = 1;
+
+  systems::controllers::ZMPPlanner zmp_planner;
+  zmp_planner.Plan(zmp_trajs[1], x0, z);
+
+  double sample_dt = 0.01;
+
+  // Perturb the initial state a bit.
+  x0 << 0, 0, 0.2, -0.1;
+  systems::controllers::ZMPTestTraj result =
+      systems::controllers::SimulateZMPPolicy(zmp_planner, x0, sample_dt, 2);
+
+  lcm::DrakeLcm lcm;
+
+  std::vector<std::string> names;
+  std::vector<Eigen::Isometry3d> poses;
+  const int N = result.time.size();
+  for (int t = 0; t < N; t++) {
+    names.push_back("CoM" + std::to_string(int(t)));
+    Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
+    pose.translation() = Eigen::Vector3d(result.nominal_com(0, t), result.nominal_com(1, t), z);
+    poses.push_back(pose);
+  }
+  for (int t = 0; t < N; t++) {
+    names.push_back("ZMP" + std::to_string(int(t)));
+    Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
+    pose.translation() = Eigen::Vector3d(result.desired_zmp(0, t), result.desired_zmp(1, t), 0);
+    poses.push_back(pose);
+  }
+  PublishFramesToLcm("DRAKE_DRAW_FRAMES", poses, names, &lcm);
+}
+
 }  // namespace eve
 }  // namespace examples
 }  // namespace drake
@@ -209,6 +258,6 @@ int main(int argc, char* argv[]) {
       "A simple dynamic simulation for the Allegro hand moving under constant"
       " torques.");
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  drake::examples::eve::DoMain2();
+  drake::examples::eve::DoMain3();
   return 0;
 }
