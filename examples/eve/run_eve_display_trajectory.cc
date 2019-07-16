@@ -254,18 +254,19 @@ void DoMain3() {
 void DoMain4() {
 
   // Design the trajectory to follow.
-  const std::vector<double> kTimes{0.0, 1.0, 2.0, 3.0, 3.01};
+  const std::vector<double> kTimes{0.0, 1.0, 2.0, 3.0, 3.05};
   std::vector<Eigen::MatrixXd> knots(kTimes.size());
   knots[0] = Eigen::Vector2d(0,0);
   knots[1] = Eigen::Vector2d(0.5,-1.0);
   knots[2] = Eigen::Vector2d(2.5,1.0);
   knots[3] = Eigen::Vector2d(3,0);
   knots[4] = Eigen::Vector2d(3,0);
-//  Eigen::VectorXd knot_dot_start = Eigen::VectorXd::Zero(2);
-//  Eigen::MatrixXd knot_dot_end = Eigen::VectorXd::Zero(2);
-
+//  trajectories::PiecewisePolynomial<double> trajectory =
+//      trajectories::PiecewisePolynomial<double>::Pchip(kTimes, knots);
+  Eigen::VectorXd knot_dot_start = Eigen::VectorXd::Zero(2);
+  Eigen::MatrixXd knot_dot_end = Eigen::VectorXd::Zero(2);
   trajectories::PiecewisePolynomial<double> trajectory =
-      trajectories::PiecewisePolynomial<double>::Pchip(kTimes, knots);
+      trajectories::PiecewisePolynomial<double>::Cubic(kTimes, knots, knot_dot_start, knot_dot_end);
 
   Eigen::Vector4d x0(0, 0, 0, 0);
   const double z = 0.6;
@@ -275,7 +276,7 @@ void DoMain4() {
   double sample_dt = 0.01;
 
   systems::controllers::ZMPTestTraj result =
-      systems::controllers::SimulateZMPPolicy(zmp_planner, x0, sample_dt, 2);
+      systems::controllers::SimulateZMPPolicy(zmp_planner, x0, sample_dt, 0.5);
 
   lcm::DrakeLcm lcm;
 

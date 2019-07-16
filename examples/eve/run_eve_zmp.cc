@@ -101,23 +101,24 @@ class JInverse : public systems::LeafSystem<double> {
   systems::Context<double>* plant_context_;
 
   JInverse(MultibodyPlant<double>& plant,
-           ModelInstanceIndex plant_instance)
-      : plant_(plant), plant_instance_(plant_instance) {
+           ModelInstanceIndex plant_instance, lcm::DrakeLcm& lcm)
+      : plant_(plant), plant_instance_(plant_instance), lcm_(lcm) {
     // Reference acceleration of CoM from cop2com.
     com_acceleration_port_index = this->DeclareVectorInputPort(
-        "COM_Acceleration", systems::BasicVector<double>(3)).get_index();
+        "COM_Acceleration", systems::BasicVector<double>(9)).get_index();
     // Reference acceleration of base from trajectory.
     base_trajectory_port_index = this->DeclareVectorInputPort(
-        "base_trajectory", systems::BasicVector<double>(9)).get_index();
+        "base_trajectory", systems::BasicVector<double>(6)).get_index();
     this->DeclareVectorOutputPort(
         "Generalized_Acceleration", systems::BasicVector<double>(plant_.num_velocities()),
         &JInverse::remap_output);
+    DeclarePeriodicPublishEvent(0.05, 0, &JInverse::MyPublishHandler);
   }
 
   void remap_output(const systems::Context<double>& context,
                     systems::BasicVector<double>* output_vector) const {
     auto output_value = output_vector->get_mutable_value();
-    auto com_acceleration_value = this->EvalVectorInput(context, com_acceleration_port_index)->get_value();
+    auto com_acceleration_value = this->EvalVectorInput(context, com_acceleration_port_index)->get_value().tail(3);
     auto base_trajectory_value = this->EvalVectorInput(context, base_trajectory_port_index)->get_value();
     drake::log()->info(base_trajectory_value.transpose());
 
@@ -128,7 +129,7 @@ class JInverse : public systems::LeafSystem<double> {
     int pris_x_position_index = plant_.GetJointByName("pris_x").position_start();
 
     // Get A and b by get rid of known base acceleration.
-    Eigen::VectorXd b = com_acceleration_value - Jcm.col(pris_x_position_index) * base_trajectory_value(6);
+    Eigen::VectorXd b = com_acceleration_value - Jcm.col(pris_x_position_index) * base_trajectory_value(4);
     removeColumn(Jcm, pris_x_position_index);
     // TODO(Zhaoyuan): Verify the correctness of the svd.
     Eigen::JacobiSVD<Eigen::MatrixXd> svd(Jcm, Eigen::ComputeThinU | Eigen::ComputeThinV);
@@ -139,8 +140,9 @@ class JInverse : public systems::LeafSystem<double> {
     output_value = Eigen::VectorXd::Zero(plant_.num_velocities());
     const int second_half_size = theta_ddot_without_base.size() - pris_x_position_index;
     output_value.head(pris_x_position_index) = theta_ddot_without_base.head(pris_x_position_index);
-    output_value(pris_x_position_index) = base_trajectory_value(6);
+    output_value(pris_x_position_index) = base_trajectory_value(4);
     output_value.tail(second_half_size) = theta_ddot_without_base.tail(second_half_size);
+//    drake::log()->info(output_value.transpose());
   }
 
   void removeColumn(Eigen::MatrixXd& matrix, int colToRemove) const {
@@ -157,6 +159,51 @@ class JInverse : public systems::LeafSystem<double> {
  private:
   MultibodyPlant<double>& plant_;
   ModelInstanceIndex plant_instance_;
+  lcm::DrakeLcm& lcm_;
+
+  systems::EventStatus MyPublishHandler(const systems::Context<double>& context) const {
+    Plot(context);
+    return systems::EventStatus::Succeeded();
+  }
+
+  void Plot(const systems::Context<double>& context) const {
+    auto cop_trajectory_value = this->EvalVectorInput(context, base_trajectory_port_index)->get_value();
+
+    Eigen::Vector3d p_WBcm;
+    plant_.CalcCenterOfMassPosition(*plant_context_, &p_WBcm);
+
+    std::vector<std::string> names;
+    std::vector<Eigen::Isometry3d> poses;
+
+    // Visualize reference ZMP position.
+    names.push_back("Ref_ZMP_" + std::to_string(context.get_time()));
+    Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
+    Eigen::Vector3d translation = Eigen::VectorXd::Zero(3);
+    translation.head(2) = cop_trajectory_value.head(2);
+    pose.translation() = translation;
+    poses.push_back(pose);
+
+    // Visualize CoM position.
+    names.push_back("COM_" + std::to_string(context.get_time()));
+    pose.translation() = p_WBcm;
+    poses.push_back(pose);
+
+    PublishFramesToLcm("DRAKE_DRAW_FRAMES", poses, names, &lcm_);
+    // Visualize expected CoM acceleration.
+    Eigen::Vector3d a_cm_expected;
+    a_cm_expected(0) = (p_WBcm(0) - cop_trajectory_value(0))
+        * plant_.gravity_field().gravity_vector().norm() / p_WBcm(2);
+    a_cm_expected(1) = (p_WBcm(1) - cop_trajectory_value(1))
+        * plant_.gravity_field().gravity_vector().norm() / p_WBcm(2);;
+    a_cm_expected(2) = 0;
+
+    std::vector<Eigen::VectorXd> contact_points;
+    std::vector<Eigen::VectorXd> contact_forces;
+    contact_points.push_back(p_WBcm);
+    contact_forces.push_back(a_cm_expected);
+
+    PublishContactToLcm(contact_points, contact_forces, &lcm_);
+  }
 };
 
 class COP2COM : public systems::LeafSystem<double> {
@@ -329,6 +376,7 @@ void DoMain() {
 
   // Create InverseDynamicsController to convert theta_ddot to Bu using plant.
   const int U = plant->num_actuators();
+  // No feed back for IDC for now.
   const Eigen::VectorXd Kp = Eigen::VectorXd::Ones(U) * 0.0;
   const Eigen::VectorXd Ki = Eigen::VectorXd::Ones(U) * 0.0;
   const Eigen::VectorXd Kd = Eigen::VectorXd::Ones(U) * 0.0;
@@ -338,32 +386,35 @@ void DoMain() {
 
 
   // Create a system to transform COM acceleration to Joint acceleration.
-  auto j_inverse = builder.AddSystem<JInverse>(*plant, plant_model_instance_index);
+  lcm::DrakeLcm lcm;
+  auto j_inverse = builder.AddSystem<JInverse>(*plant, plant_model_instance_index, lcm);
   builder.Connect(j_inverse->get_output_port(0), IDC->get_input_port_desired_acceleration());
 
   // Create a COP to COM transform
-  lcm::DrakeLcm lcm;
-  auto cop2com = builder.AddSystem<COP2COM>(*plant, plant_model_instance_index, lcm);
-  builder.Connect(cop2com->get_output_port(0), j_inverse->get_input_port(j_inverse->com_acceleration_port_index));
-  builder.Connect(plant->get_state_output_port(), cop2com->get_input_port(cop2com->mbp_state_port_index));
+
+//  auto cop2com = builder.AddSystem<COP2COM>(*plant, plant_model_instance_index, lcm);
+//  builder.Connect(cop2com->get_output_port(0), j_inverse->get_input_port(j_inverse->com_acceleration_port_index));
+//  builder.Connect(plant->get_state_output_port(), cop2com->get_input_port(cop2com->mbp_state_port_index));
 
   // Design the trajectory to follow.
-  const std::vector<double> kTimes{0.0, 2.0, 4.0};
+  const std::vector<double> kTimes{0.0, 1, 2.0,3, 4.0};
   std::vector<Eigen::MatrixXd> knots(kTimes.size());
-  knots[0] = Eigen::Vector3d(0,0,0);
-  knots[1] = Eigen::Vector3d(1,0,0);
-  knots[2] = Eigen::Vector3d(2,0,0);
+  knots[0] = Eigen::Vector2d(0,0);
+  knots[1] = Eigen::Vector2d(0.2,0);
+  knots[2] = Eigen::Vector2d(1,0);
+  knots[3] = Eigen::Vector2d(1.8,0);
+  knots[4] = Eigen::Vector2d(2,0);
 //  trajectories::PiecewisePolynomial<double> trajectory =
 //      trajectories::PiecewisePolynomial<double>::FirstOrderHold(kTimes, knots);
   trajectories::PiecewisePolynomial<double> trajectory =
       trajectories::PiecewisePolynomial<double>::Pchip(kTimes, knots);
 
-  // Adds a trajectory source for desired state.
-  auto traj_src = builder.AddSystem<systems::TrajectorySource<double>>(
-      trajectory, 1 /* outputs q + v */);
-  traj_src->set_name("trajectory_source");
-  builder.Connect(traj_src->get_output_port(),
-                  cop2com->get_input_port(cop2com->cop_trajectory_port_index));
+//  // Adds a trajectory source for desired state.
+//  auto traj_src = builder.AddSystem<systems::TrajectorySource<double>>(
+//      trajectory, 1 /* outputs q + v */);
+//  traj_src->set_name("trajectory_source");
+//  builder.Connect(traj_src->get_output_port(),
+//                  cop2com->get_input_port(cop2com->cop_trajectory_port_index));
 
   // Adds a trajectory source for desired base acceleration.
   auto traj_acc_src = builder.AddSystem<systems::TrajectorySource<double>>(
@@ -386,6 +437,35 @@ void DoMain() {
 //  // This source is the 1 dimension base state.
 //  builder.Connect(traj_src->get_output_port(), base_controller->get_input_port_desired_state());
 
+  // TODO: Compute the com height using multibody plant function.
+  // Given the trajectory of reference ZMP, we get the CoM trajectory.
+  const double z_cm = 0.592203;
+  Eigen::Vector4d x0(0, 0, 0, 0);
+  systems::controllers::ZMPPlanner zmp_planner;
+  zmp_planner.Plan(trajectory, x0, z_cm);
+  double sample_dt = 0.01;
+  systems::controllers::ZMPTestTraj result =
+      systems::controllers::SimulateZMPPolicy(zmp_planner, x0, sample_dt, 0.5);
+
+  const int N = result.time.size();
+  std::vector<double> com_times;
+  std::vector<Eigen::MatrixXd> com_knots;
+  for (int i = 0; i < N; i++) {
+    com_times.push_back(result.time[i]);
+    Eigen::Vector3d pi_com;
+    pi_com.head(2) = result.nominal_com.col(i).head(2);
+    pi_com(2) = z_cm;
+    com_knots.push_back(pi_com);
+  }
+  trajectories::PiecewisePolynomial<double> com_trajectory =
+      trajectories::PiecewisePolynomial<double>::Pchip(com_times, com_knots);
+  // Adds a trajectory source for desired base acceleration.
+  auto com_traj_acc_src = builder.AddSystem<systems::TrajectorySource<double>>(
+      com_trajectory, 2 /* outputs q + v + a*/);
+  com_traj_acc_src->set_name("com_trajectory_acceleration_source");
+  builder.Connect(com_traj_acc_src->get_output_port(),
+                  j_inverse->get_input_port(j_inverse->com_acceleration_port_index));
+
 
 
   // Connect plant with scene_graph to get collision information.
@@ -398,16 +478,41 @@ void DoMain() {
 
   geometry::ConnectDrakeVisualizer(&builder, scene_graph);
 
-  // Create a context for this diagram and plant.
+//  // Create a tmp context for this diagram and plant.
+//  std::unique_ptr<systems::Diagram<double>> diagram_tmp = builder.Build();
+//  std::unique_ptr<systems::Context<double>> diagram_context_tmp =
+//      diagram_tmp->CreateDefaultContext();
+//
+//  systems::Context<double>& plant_context_tmp = diagram_tmp->GetMutableSubsystemContext(*plant, diagram_context_tmp.get());
+////  cop2com->plant_context_ = &plant_context_real;
+//
+//  // Set the robot COM position, make sure the robot base is off the ground.
+//  Eigen::VectorXd positions_tmp = Eigen::VectorXd::Zero(plant->num_positions());
+//  positions_tmp[plant->GetJointByName("j_hip_y").position_start()] = 0.43;
+//  positions_tmp[plant->GetJointByName("j_knee_y").position_start()] = -0.91;
+//  positions_tmp[plant->GetJointByName("j_ankle_y").position_start()] = 0.47;
+//  plant->SetPositions(&plant_context_tmp, positions_tmp);
+//
+//  // Set robot init velocity for every joint.
+//  drake::VectorX<double> velocities_tmp = Eigen::VectorXd::Zero(plant->num_velocities());
+//  plant->SetVelocities(&plant_context_tmp, velocities_tmp);
+
+//  // Compute the CoM position and extract height.
+//  Eigen::Vector3d p_cm;
+//  plant->CalcCenterOfMassPosition(plant_context_tmp, &p_cm);
+//  const double z_cm = p_cm(2);
+//  drake::log()->info(p_cm.transpose());
+
+
+  // Create a real context for this diagram and plant.
   std::unique_ptr<systems::Diagram<double>> diagram = builder.Build();
   std::unique_ptr<systems::Context<double>> diagram_context =
       diagram->CreateDefaultContext();
 
   systems::Context<double>& plant_context_real = diagram->GetMutableSubsystemContext(*plant, diagram_context.get());
-  cop2com->plant_context_ = &plant_context_real;
   j_inverse->plant_context_ = &plant_context_real;
 
-//  // Set the robot COM position, make sure the robot base is off the ground.
+  // Set the robot COM position, make sure the robot base is off the ground.
   Eigen::VectorXd positions = Eigen::VectorXd::Zero(plant->num_positions());
   positions[plant->GetJointByName("j_hip_y").position_start()] = 0.43;
   positions[plant->GetJointByName("j_knee_y").position_start()] = -0.91;
