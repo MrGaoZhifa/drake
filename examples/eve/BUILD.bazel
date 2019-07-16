@@ -54,7 +54,36 @@ drake_cc_binary(
 drake_cc_binary(
     name = "run_eve_zmp",
     testonly = 1,
-    srcs = ["run_eve_zmp.cc"],
+    srcs = ["run_eve_zmp_xy.cc"],
+    data = [
+        "//manipulation/models/eve:models",
+        "//manipulation/models/qb_hand_description:models",
+    ],
+    deps = [
+        ":eve_common",
+        "//common:find_resource",
+        "//common:text_logging_gflags",
+        "//geometry:geometry_visualization",
+        "//lcm",
+        "//lcmtypes:viewer",
+        "//multibody/benchmarks/inclined_plane",
+        "//multibody/parsing",
+        "//multibody/plant",
+        "//multibody/plant:contact_results_to_lcm",
+        "//systems/analysis",
+        "//systems/controllers",
+        "//systems/controllers:zmp_test_util",
+        "//systems/framework",
+        "//systems/primitives",
+        "//systems/rendering:pose_bundle_to_draw_message",
+        "@gflags",
+    ],
+)
+
+drake_cc_binary(
+    name = "run_eve_zmp_x",
+    testonly = 1,
+    srcs = ["run_eve_zmp_x.cc"],
     data = [
         "//manipulation/models/eve:models",
         "//manipulation/models/qb_hand_description:models",

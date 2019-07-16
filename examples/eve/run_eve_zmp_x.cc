@@ -420,10 +420,10 @@ void DoMain() {
   const std::vector<double> kTimes{0.0, 1.0, 2.0, 3.0, 4.0};
   std::vector<Eigen::MatrixXd> knots(kTimes.size());
   knots[0] = Eigen::Vector2d(0,0);
-  knots[1] = Eigen::Vector2d(0.1,0);
-  knots[2] = Eigen::Vector2d(1,0);
-  knots[3] = Eigen::Vector2d(1.9,0);
-  knots[4] = Eigen::Vector2d(2,0);
+  knots[1] = Eigen::Vector2d(0.5,0);
+  knots[2] = Eigen::Vector2d(3,0);
+  knots[3] = Eigen::Vector2d(5.5,0);
+  knots[4] = Eigen::Vector2d(6,0);
 //  trajectories::PiecewisePolynomial<double> trajectory =
 //      trajectories::PiecewisePolynomial<double>::FirstOrderHold(kTimes, knots);
   trajectories::PiecewisePolynomial<double> trajectory =
@@ -489,13 +489,13 @@ void DoMain() {
   // Visualize the CoM and ZMP trajectory.
   std::vector<std::string> names;
   std::vector<Eigen::Isometry3d> poses;
-  for (int t = 0; t < N; t=t+3) {
+  for (int t = 0; t < N; t=t+5) {
     names.push_back("CoM" + std::to_string(int(t)));
     Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
     pose.translation() = Eigen::Vector3d(result.nominal_com(0, t), result.nominal_com(1, t), z_cm);
     poses.push_back(pose);
   }
-  for (int t = 0; t < N; t=t+3) {
+  for (int t = 0; t < N; t=t+5) {
     names.push_back("ZMP" + std::to_string(int(t)));
     Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
     pose.translation() = Eigen::Vector3d(result.desired_zmp(0, t), result.desired_zmp(1, t), 0);
