@@ -37,6 +37,9 @@
 #include "drake/examples/eve/eve_common.h"
 #include "drake/systems/controllers/test/zmp_test_util.h"
 
+#include <chrono>
+#include <thread>
+
 namespace drake {
 namespace examples {
 namespace eve {
@@ -93,6 +96,8 @@ DEFINE_bool(is_inclined_plane_half_space, true,
 DEFINE_string(bodyB_type, "sphere",
               "Valid body types are "
               "'sphere', 'block', or 'block_with_4Spheres'");
+DEFINE_double(com_kp, 2.0, "Used on feedback of com position to track com acceleration.");
+DEFINE_double(com_kd, 0.1, "Used on feedback of com velocity to track com acceleration.");
 
 class JInverse : public systems::LeafSystem<double> {
  public:
@@ -118,9 +123,19 @@ class JInverse : public systems::LeafSystem<double> {
   void remap_output(const systems::Context<double>& context,
                     systems::BasicVector<double>* output_vector) const {
     auto output_value = output_vector->get_mutable_value();
-    auto com_acceleration_value = this->EvalVectorInput(context, com_acceleration_port_index)->get_value().tail(3);
+    auto com_trajectory_value = this->EvalVectorInput(context, com_acceleration_port_index)->get_value();
+    auto com_acceleration_value = com_trajectory_value.tail(3);
+//    drake::log()->info(com_acceleration_value.transpose());
     auto base_trajectory_value = this->EvalVectorInput(context, base_trajectory_port_index)->get_value();
     drake::log()->info(base_trajectory_value.transpose());
+
+    // Compute CoM position and velocity.
+    Eigen::Vector3d p_WBcm, v_WBcm;
+    plant_.CalcCenterOfMassPosition(*plant_context_, &p_WBcm);
+    plant_.CalcCenterOfMassVelocity(*plant_context_, &v_WBcm);
+    Eigen::Vector3d a_cm = com_acceleration_value
+        + FLAGS_com_kp * (com_trajectory_value.head(3) - p_WBcm)
+        + FLAGS_com_kd * (com_trajectory_value.segment<3>(3) - v_WBcm);
 
     // Calculate Jacobian.
 //    const Eigen::MatrixXd Jcm = plant_.CalcCenterOfMassJacobian(context);
@@ -129,7 +144,7 @@ class JInverse : public systems::LeafSystem<double> {
     int pris_x_position_index = plant_.GetJointByName("pris_x").position_start();
 
     // Get A and b by get rid of known base acceleration.
-    Eigen::VectorXd b = com_acceleration_value - Jcm.col(pris_x_position_index) * base_trajectory_value(4);
+    Eigen::VectorXd b = a_cm - Jcm.col(pris_x_position_index) * base_trajectory_value(4);
     removeColumn(Jcm, pris_x_position_index);
     // TODO(Zhaoyuan): Verify the correctness of the svd.
     Eigen::JacobiSVD<Eigen::MatrixXd> svd(Jcm, Eigen::ComputeThinU | Eigen::ComputeThinV);
@@ -143,6 +158,11 @@ class JInverse : public systems::LeafSystem<double> {
     output_value(pris_x_position_index) = base_trajectory_value(4);
     output_value.tail(second_half_size) = theta_ddot_without_base.tail(second_half_size);
 //    drake::log()->info(output_value.transpose());
+
+    // Verify svd.
+    MatrixX<double> Jcm_tmp(3, plant_.num_velocities());
+    plant_.CalcCenterOfMassJacobian(*plant_context_, &Jcm_tmp);
+    DRAKE_THROW_UNLESS((Jcm_tmp*output_value - a_cm).norm() < 1e-12);
   }
 
   void removeColumn(Eigen::MatrixXd& matrix, int colToRemove) const {
@@ -240,7 +260,7 @@ class COP2COM : public systems::LeafSystem<double> {
     output_value(0) = (p_WBcm(0) - cop_trajectory_value(0))
         * plant_.gravity_field().gravity_vector().norm() / p_WBcm(2);
     output_value(1) = (p_WBcm(1) - cop_trajectory_value(1))
-        * plant_.gravity_field().gravity_vector().norm() / p_WBcm(2);;
+        * plant_.gravity_field().gravity_vector().norm() / p_WBcm(2);
     output_value(2) = 0;
   }
 
@@ -397,12 +417,12 @@ void DoMain() {
 //  builder.Connect(plant->get_state_output_port(), cop2com->get_input_port(cop2com->mbp_state_port_index));
 
   // Design the trajectory to follow.
-  const std::vector<double> kTimes{0.0, 1, 2.0,3, 4.0};
+  const std::vector<double> kTimes{0.0, 1.0, 2.0, 3.0, 4.0};
   std::vector<Eigen::MatrixXd> knots(kTimes.size());
   knots[0] = Eigen::Vector2d(0,0);
-  knots[1] = Eigen::Vector2d(0.2,0);
+  knots[1] = Eigen::Vector2d(0.1,0);
   knots[2] = Eigen::Vector2d(1,0);
-  knots[3] = Eigen::Vector2d(1.8,0);
+  knots[3] = Eigen::Vector2d(1.9,0);
   knots[4] = Eigen::Vector2d(2,0);
 //  trajectories::PiecewisePolynomial<double> trajectory =
 //      trajectories::PiecewisePolynomial<double>::FirstOrderHold(kTimes, knots);
@@ -445,7 +465,7 @@ void DoMain() {
   zmp_planner.Plan(trajectory, x0, z_cm);
   double sample_dt = 0.01;
   systems::controllers::ZMPTestTraj result =
-      systems::controllers::SimulateZMPPolicy(zmp_planner, x0, sample_dt, 0.5);
+      systems::controllers::SimulateZMPPolicy(zmp_planner, x0, sample_dt, 0.02);
 
   const int N = result.time.size();
   std::vector<double> com_times;
@@ -466,7 +486,23 @@ void DoMain() {
   builder.Connect(com_traj_acc_src->get_output_port(),
                   j_inverse->get_input_port(j_inverse->com_acceleration_port_index));
 
-
+  // Visualize the CoM and ZMP trajectory.
+  std::vector<std::string> names;
+  std::vector<Eigen::Isometry3d> poses;
+  for (int t = 0; t < N; t=t+3) {
+    names.push_back("CoM" + std::to_string(int(t)));
+    Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
+    pose.translation() = Eigen::Vector3d(result.nominal_com(0, t), result.nominal_com(1, t), z_cm);
+    poses.push_back(pose);
+  }
+  for (int t = 0; t < N; t=t+3) {
+    names.push_back("ZMP" + std::to_string(int(t)));
+    Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
+    pose.translation() = Eigen::Vector3d(result.desired_zmp(0, t), result.desired_zmp(1, t), 0);
+    poses.push_back(pose);
+  }
+  PublishFramesToLcm("DRAKE_DRAW_FRAMES2", poses, names, &lcm);
+  std::this_thread::sleep_for(std::chrono::seconds(2));
 
   // Connect plant with scene_graph to get collision information.
   DRAKE_DEMAND(!!plant->get_source_id());
