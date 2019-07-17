@@ -26,6 +26,15 @@ drake_cc_library(
 )
 
 drake_cc_binary(
+    name = "run_eve_mathematical_program",
+    srcs = ["run_eve_mathematical_program.cc"],
+    deps = [
+        "//solvers:solve",
+        "@gflags",
+    ],
+)
+
+drake_cc_binary(
     name = "run_eve_com",
     srcs = ["run_eve_com.cc"],
     data = [
