@@ -180,22 +180,23 @@ class JInverse : public systems::LeafSystem<double> {
     Eigen::VectorXd theta_ddot_without_base = svd.solve(b);
 
 
-//    // Solve using the mathematical programming.
-//    solvers::MathematicalProgram prog;
-//    const int X_size = plant_.num_velocities()-2;
-//    auto X_ = prog.NewContinuousVariables(X_size, "X");
-//    // Add quadratic cost.
-//    Eigen::MatrixXd Q = 10 * Eigen::MatrixXd::Identity(X_size, X_size);
-//    Eigen::MatrixXd c = Eigen::MatrixXd::Zero(10, 1);
-//    prog.AddQuadraticCost(Q, c, X_);
-//    prog.AddLinearEqualityConstraint(Jcm_trimed * X_, b);
-//    const solvers::MathematicalProgramResult result = Solve(prog);
-//    // Check result
-//    auto X_value = result.GetSolution(X_);
-////    DRAKE_THROW_UNLESS(result.is_success() == true);
-////    DRAKE_THROW_UNLESS((X_value-theta_ddot_without_base).norm() < 1e-10);
-////    DRAKE_THROW_UNLESS((Jcm_trimed*X_value - b).norm() < 1e-8);
-
+    // Solve using the mathematical programming.
+    solvers::MathematicalProgram prog;
+    const int X_size = plant_.num_velocities()-2;
+    auto X_ = prog.NewContinuousVariables(X_size, "X");
+    // Add quadratic cost.
+    Eigen::MatrixXd Q = Eigen::MatrixXd::Identity(X_size, X_size);
+    Q.block<6,6>(0,0) = 0.5 * Eigen::MatrixXd::Identity(6, 6);
+    Eigen::VectorXd c = Eigen::VectorXd::Zero(X_size);
+    prog.AddQuadraticCost(Q, c, X_);
+    prog.AddLinearEqualityConstraint(Jcm_trimed * X_, b);
+    const solvers::MathematicalProgramResult result = Solve(prog);
+    // Check result
+    auto X_value = result.GetSolution(X_);
+    DRAKE_THROW_UNLESS(result.is_success() == true);
+//    DRAKE_THROW_UNLESS((X_value-theta_ddot_without_base).norm() < 1e-12);
+    DRAKE_THROW_UNLESS((Jcm_trimed*X_value - b).norm() < 1e-12);
+//    drake::log()->info(Jcm_trimed*X_value - b);
 
     // Insert the xd_dot and yd_dot back to thetad_dot. Skip first for compile error.
     output_value = Eigen::VectorXd::Zero(plant_.num_velocities());
@@ -211,7 +212,8 @@ class JInverse : public systems::LeafSystem<double> {
         output_value[i] = base_acc_y;
         continue;
       }
-      output_value[i] = theta_ddot_without_base[i-index];
+//      output_value[i] = theta_ddot_without_base[i-index];
+      output_value[i] = X_value[i-index];
     }
     DRAKE_THROW_UNLESS(output_value[pris_x_position_index] == base_acc_x);
     DRAKE_THROW_UNLESS(output_value[pris_y_position_index] == base_acc_y);
