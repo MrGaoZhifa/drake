@@ -36,6 +36,8 @@
 #include "drake/lcmt_viewer_draw.hpp"
 #include "drake/examples/eve/eve_common.h"
 #include "drake/systems/controllers/test/zmp_test_util.h"
+#include "drake/solvers/linear_system_solver.h"
+#include "drake/solvers/solve.h"
 
 #include <chrono>
 #include <thread>
@@ -171,6 +173,24 @@ class JInverse : public systems::LeafSystem<double> {
     Eigen::JacobiSVD<Eigen::MatrixXd> svd(Jcm_trimed, Eigen::ComputeThinU | Eigen::ComputeThinV);
     Eigen::VectorXd theta_ddot_without_base = svd.solve(b);
 
+
+//    // Solve using the mathematical programming.
+//    solvers::MathematicalProgram prog;
+//    const int X_size = plant_.num_velocities()-2;
+//    auto X_ = prog.NewContinuousVariables(X_size, "X");
+//    // Add quadratic cost.
+//    Eigen::MatrixXd Q = 10 * Eigen::MatrixXd::Identity(X_size, X_size);
+//    Eigen::MatrixXd c = Eigen::MatrixXd::Zero(10, 1);
+//    prog.AddQuadraticCost(Q, c, X_);
+//    prog.AddLinearEqualityConstraint(Jcm_trimed * X_, b);
+//    const solvers::MathematicalProgramResult result = Solve(prog);
+//    // Check result
+//    auto X_value = result.GetSolution(X_);
+////    DRAKE_THROW_UNLESS(result.is_success() == true);
+////    DRAKE_THROW_UNLESS((X_value-theta_ddot_without_base).norm() < 1e-10);
+////    DRAKE_THROW_UNLESS((Jcm_trimed*X_value - b).norm() < 1e-8);
+
+
     // Insert the xd_dot and yd_dot back to thetad_dot. Skip first for compile error.
     output_value = Eigen::VectorXd::Zero(plant_.num_velocities());
     index = 0;
@@ -198,6 +218,7 @@ class JInverse : public systems::LeafSystem<double> {
     // Verify svd.
     MatrixX<double> Jcm_tmp(3, plant_.num_velocities());
     plant_.CalcCenterOfMassJacobian(*plant_context_, &Jcm_tmp);
+    DRAKE_THROW_UNLESS((Jcm_trimed*theta_ddot_without_base - b).norm() < 1e-12);
     DRAKE_THROW_UNLESS((Jcm_tmp*output_value - a_cm).norm() < 1e-12);
   }
 

@@ -79,6 +79,7 @@ drake_cc_binary(
         "//multibody/parsing",
         "//multibody/plant",
         "//multibody/plant:contact_results_to_lcm",
+        "//solvers:solve",
         "//systems/analysis",
         "//systems/controllers",
         "//systems/controllers:zmp_test_util",
