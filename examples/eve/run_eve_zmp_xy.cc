@@ -186,10 +186,12 @@ class JInverse : public systems::LeafSystem<double> {
     auto X_ = prog.NewContinuousVariables(X_size, "X");
     // Add quadratic cost.
     Eigen::MatrixXd Q = Eigen::MatrixXd::Identity(X_size, X_size);
-    Q.block<6,6>(0,0) = 0.5 * Eigen::MatrixXd::Identity(6, 6);
+    Q.block<6,6>(0,0) = 10 * Eigen::MatrixXd::Identity(6, 6);
     Eigen::VectorXd c = Eigen::VectorXd::Zero(X_size);
     prog.AddQuadraticCost(Q, c, X_);
     prog.AddLinearEqualityConstraint(Jcm_trimed * X_, b);
+    // Allow the upper body to keep up straight.
+    prog.AddLinearEqualityConstraint(X_(1) + X_(2) + X_(3), 0);
     const solvers::MathematicalProgramResult result = Solve(prog);
     // Check result
     auto X_value = result.GetSolution(X_);
