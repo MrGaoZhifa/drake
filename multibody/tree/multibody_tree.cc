@@ -1079,11 +1079,33 @@ void MultibodyTree<T>::CalcCenterOfMassJacobian(const systems::Context<T>& conte
     CalcPointsPositions(context, body.body_frame(), pi_BoBcm, world_frame(),
                         &pi_WBcm);
 
+    // Calculate the CoM Jacobian for each body.
     MatrixX<T> Ji = Eigen::MatrixXd::Zero(3, num_velocities());
     CalcJacobianTranslationalVelocity(
         context, multibody::JacobianWrtVariable::kV,
         body.body_frame(), world_frame(), pi_WBcm, world_frame(),
         world_frame(), &Ji);
+
+    // Calc CoM acceleration bias for each body.
+//    Vector3<T> Jdot_vi = CalcBiasForJacobianTranslationalVelocity(
+//        context, multibody::JacobianWrtVariable::kV, body.body_frame(),
+//        pi_BoBcm, world_frame(), world_frame());
+
+    // Calc CoM acceleration for each body.
+//    const PositionKinematicsCache<T>& pc = EvalPositionKinematics(context);
+//    const VelocityKinematicsCache<T>& vc = EvalVelocityKinematics(context);
+//    std::vector<SpatialAcceleration<T>> A_WB_array(num_bodies());
+//    const VectorX<T> vdot_real = VectorX<T>::Random(num_velocities());
+//    CalcSpatialAccelerationsFromVdot(context, pc, vc, vdot_real, &A_WB_array);
+//    // Extract point Bo's spatial acceleration bias from the large array.
+//    const SpatialAcceleration<T>& A_WBo = A_WB_array[body.node_index()];
+//    const RigidTransform<T> X_BF = body.body_frame().GetFixedPoseInBodyFrame();
+//    const SpatialAcceleration<T> A_WFp = CalcSpatialAccelerationBiasShift(
+//        context, body.body_frame(), X_BF, pi_BoBcm, A_WBo, world_frame());
+//    Vector3<T> a_WFp = A_WFp.translational();
+//    DRAKE_THROW_UNLESS((a_WFp - Jdot_vi - Ji * vdot_real).norm() < 1e-12);
+//    drake::log()->info(a_WFp.transpose());
+//    drake::log()->info(Jdot_vi.transpose());
 
     // Calculate M and M * v in world frame.
     const T& body_mass = body.get_mass(context);
@@ -1092,6 +1114,40 @@ void MultibodyTree<T>::CalcCenterOfMassJacobian(const systems::Context<T>& conte
   }
 
   *Jcm = MJ / M;
+}
+
+template <typename T>
+void MultibodyTree<T>::CalcBiasForCenterOfMassJacobianTranslationalVelocity(const systems::Context<T>& context,
+                                                                            EigenPtr<Vector3<T>> abias_AFp) const {
+  DRAKE_THROW_UNLESS(abias_AFp != nullptr);
+  DRAKE_THROW_UNLESS(abias_AFp->rows() == 3);
+  DRAKE_THROW_UNLESS(abias_AFp->cols() == 1);
+  DRAKE_THROW_UNLESS(num_bodies() > 1);
+
+  MatrixX<T> M_Jdot_v = Eigen::Vector3d::Zero();
+  T M = 0;
+
+  // Selected model instances unspecified, use all the bodies in the
+  // multibody_tree. Start from 1 to avoid the world_body.
+  for (BodyIndex body_index(1); body_index < num_bodies(); ++body_index) {
+    const Body<T> &body = get_body(body_index);
+
+    Vector3<T> pi_BoBcm = body.CalcCenterOfMassInBodyFrame(context);
+//    Vector3<T> pi_WBcm = Vector3<T>::Zero(3);
+//    CalcPointsPositions(context, body.body_frame(), pi_BoBcm, world_frame(),
+//                        &pi_WBcm);
+
+    Vector3<T> Jdot_vi = CalcBiasForJacobianTranslationalVelocity(
+        context, multibody::JacobianWrtVariable::kV,
+        body.body_frame(), pi_BoBcm, world_frame(), world_frame());
+
+    // Calculate M and M * v in world frame.
+    const T& body_mass = body.get_mass(context);
+    M += body_mass;
+    M_Jdot_v += body_mass * Jdot_vi;
+  }
+
+  *abias_AFp = M_Jdot_v / M;
 }
 
 template <typename T>

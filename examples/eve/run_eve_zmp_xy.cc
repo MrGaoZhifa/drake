@@ -131,7 +131,7 @@ class JInverse : public systems::LeafSystem<double> {
     auto com_acceleration_value = com_trajectory_value.tail(3);
 //    drake::log()->info(com_acceleration_value.transpose());
     auto base_trajectory_value = this->EvalVectorInput(context, base_trajectory_port_index)->get_value();
-    drake::log()->info(base_trajectory_value.transpose());
+//    drake::log()->info(base_trajectory_value.transpose());
 
     // Compute CoM position and velocity.
     Eigen::Vector3d p_WBcm, v_WBcm;
@@ -158,8 +158,14 @@ class JInverse : public systems::LeafSystem<double> {
         + FLAGS_base_kp * (base_trajectory_value(1) - positions(pris_y_position_index))
         + FLAGS_base_kd * (base_trajectory_value(3) - velocities(pris_y_position_index));
 
+    // Calculate acceleration bias term.
+    Eigen::Vector3d a_bias;
+    plant_.CalcBiasForCenterOfMassJacobianTranslationalVelocity(*plant_context_, &a_bias);
+
     // Get A and b by get rid of known base acceleration.
-    Eigen::VectorXd b = a_cm - Jcm.col(pris_x_position_index) * base_acc_x - Jcm.col(pris_y_position_index) * base_acc_y;
+    Eigen::VectorXd b = a_cm - a_bias
+        - Jcm.col(pris_x_position_index) * base_acc_x
+        - Jcm.col(pris_y_position_index) * base_acc_y;
 //    removeColumn(Jcm, pris_x_position_index);
     MatrixX<double> Jcm_trimed(3, plant_.num_velocities()-2);
     int index = 0;
@@ -218,8 +224,8 @@ class JInverse : public systems::LeafSystem<double> {
     // Verify svd.
     MatrixX<double> Jcm_tmp(3, plant_.num_velocities());
     plant_.CalcCenterOfMassJacobian(*plant_context_, &Jcm_tmp);
-    DRAKE_THROW_UNLESS((Jcm_trimed*theta_ddot_without_base - b).norm() < 1e-12);
-    DRAKE_THROW_UNLESS((Jcm_tmp*output_value - a_cm).norm() < 1e-12);
+    DRAKE_THROW_UNLESS((Jcm_trimed*theta_ddot_without_base - b).norm() < 1e-10);
+    DRAKE_THROW_UNLESS((Jcm_tmp*output_value - (a_cm-a_bias)).norm() < 1e-10);
   }
 
   void removeColumn(Eigen::MatrixXd& matrix, int colToRemove) const {
@@ -245,6 +251,7 @@ class JInverse : public systems::LeafSystem<double> {
 
   void Plot(const systems::Context<double>& context) const {
     auto cop_trajectory_value = this->EvalVectorInput(context, base_trajectory_port_index)->get_value();
+    auto com_trajectory_value = this->EvalVectorInput(context, com_acceleration_port_index)->get_value();
 
     Eigen::Vector3d p_WBcm;
     plant_.CalcCenterOfMassPosition(*plant_context_, &p_WBcm);
@@ -266,18 +273,31 @@ class JInverse : public systems::LeafSystem<double> {
     poses.push_back(pose);
 
     PublishFramesToLcm("DRAKE_DRAW_FRAMES", poses, names, &lcm_);
-    // Visualize expected CoM acceleration.
+
+
+    // Draw arrows.
+    std::vector<Eigen::VectorXd> contact_points;
+    std::vector<Eigen::VectorXd> contact_forces;
+
+    // Visualize CoM position error.
     Eigen::Vector3d a_cm_expected;
     a_cm_expected(0) = (p_WBcm(0) - cop_trajectory_value(0))
         * plant_.gravity_field().gravity_vector().norm() / p_WBcm(2);
     a_cm_expected(1) = (p_WBcm(1) - cop_trajectory_value(1))
-        * plant_.gravity_field().gravity_vector().norm() / p_WBcm(2);;
+        * plant_.gravity_field().gravity_vector().norm() / p_WBcm(2);
     a_cm_expected(2) = 0;
-
-    std::vector<Eigen::VectorXd> contact_points;
-    std::vector<Eigen::VectorXd> contact_forces;
     contact_points.push_back(p_WBcm);
-    contact_forces.push_back(a_cm_expected);
+    contact_forces.push_back(com_trajectory_value.head(3)-p_WBcm);
+
+    // Visualize base position error.
+    Eigen::Vector3d e_base = Eigen::Vector3d::Zero();
+    int pris_x_position_index = plant_.GetJointByName("pris_x").position_start();
+    int pris_y_position_index = plant_.GetJointByName("pris_y").position_start();
+    auto positions = plant_.GetPositions(*plant_context_, plant_instance_);
+    Eigen::Vector3d p_base(positions[pris_x_position_index], positions[pris_y_position_index], 0);
+    e_base.head(2) = cop_trajectory_value.head(2) - p_base.head(2);
+    contact_points.push_back(p_base);
+    contact_forces.push_back(e_base);
 
     PublishContactToLcm(contact_points, contact_forces, &lcm_);
   }
@@ -485,20 +505,20 @@ void DoMain() {
 //  builder.Connect(plant->get_state_output_port(), cop2com->get_input_port(cop2com->mbp_state_port_index));
 
   // Design the trajectory to follow.
-//  const std::vector<double> kTimes{0.0, 1.0, 2.0, 3.0, 4.0};
-//  std::vector<Eigen::MatrixXd> knots(kTimes.size());
-//  knots[0] = Eigen::Vector2d(0,0);
-//  knots[1] = Eigen::Vector2d(0.5,0);
-//  knots[2] = Eigen::Vector2d(3,0);
-//  knots[3] = Eigen::Vector2d(5.5,0);
-//  knots[4] = Eigen::Vector2d(6,0);
-
-  const std::vector<double> kTimes{0.0, 1.0, 2.0, 3.0};
+  const std::vector<double> kTimes{0.0, 0.8, 2.0, 3.2, 4.0};
   std::vector<Eigen::MatrixXd> knots(kTimes.size());
   knots[0] = Eigen::Vector2d(0,0);
-  knots[1] = Eigen::Vector2d(0.5,-0.5);
-  knots[2] = Eigen::Vector2d(2.5,0.5);
-  knots[3] = Eigen::Vector2d(3,0);
+  knots[1] = Eigen::Vector2d(0.5,0);
+  knots[2] = Eigen::Vector2d(3,0.5);
+  knots[3] = Eigen::Vector2d(5.5,0);
+  knots[4] = Eigen::Vector2d(6,0);
+
+//  const std::vector<double> kTimes{0.0, 1.0, 2.0, 3.0};
+//  std::vector<Eigen::MatrixXd> knots(kTimes.size());
+//  knots[0] = Eigen::Vector2d(0,0);
+//  knots[1] = Eigen::Vector2d(0.5,-0.0);
+//  knots[2] = Eigen::Vector2d(2.5,0.0);
+//  knots[3] = Eigen::Vector2d(3,0);
 //  trajectories::PiecewisePolynomial<double> trajectory =
 //      trajectories::PiecewisePolynomial<double>::FirstOrderHold(kTimes, knots);
   trajectories::PiecewisePolynomial<double> trajectory =
@@ -632,7 +652,7 @@ void DoMain() {
 
   // Set robot init velocity for every joint.
   drake::VectorX<double> velocities = Eigen::VectorXd::Zero(plant->num_velocities());
-  velocities[plant->GetJointByName("pris_y").velocity_start()] = -1.25;
+//  velocities[plant->GetJointByName("pris_y").velocity_start()] = -1.25;
   plant->SetVelocities(&plant_context_real, velocities);
 
   // Set up simulator.

@@ -1242,6 +1242,9 @@ class MultibodyTree {
   void CalcCenterOfMassJacobian(const systems::Context<T>& context,
                                 EigenPtr<MatrixX<T>> Jcm) const;
 
+  void CalcBiasForCenterOfMassJacobianTranslationalVelocity(const systems::Context<T>& context,
+      EigenPtr<Vector3<T>> abias_AFp) const;
+
   /// See MultibodyPlant method.
   const math::RigidTransform<T>& EvalBodyPoseInWorld(
       const systems::Context<T>& context,

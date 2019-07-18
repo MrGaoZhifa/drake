@@ -1481,6 +1481,11 @@ class MultibodyPlant : public internal::MultibodyTreeSystem<T> {
     internal_tree().CalcCenterOfMassJacobian(context, Jcm);
   }
 
+  void CalcBiasForCenterOfMassJacobianTranslationalVelocity(const systems::Context<T>& context,
+                                EigenPtr<Vector3<T>> abias_AFp) const {
+    internal_tree().CalcBiasForCenterOfMassJacobianTranslationalVelocity(context, abias_AFp);
+  }
+
   /// Evaluate the pose `X_WB` of a body B in the world frame W.
   /// @param[in] context
   ///   The context storing the state of the model.
