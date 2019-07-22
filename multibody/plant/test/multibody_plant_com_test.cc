@@ -25,6 +25,16 @@ GTEST_TEST(EmptyMultibodyPlantCenterOfMassTest, GetCenterOfMassPosition) {
       "world_body\\(\\) so its center of mass is undefined.");
 }
 
+GTEST_TEST(EmptyMultibodyPlantCenterOfMassTest, GetCenterOfMassVelocity) {
+  MultibodyPlant<double> plant_;
+  plant_.Finalize();
+  auto context_ = plant_.CreateDefaultContext();
+  DRAKE_EXPECT_THROWS_MESSAGE(
+      plant_.CalcCenterOfMassVelocity(*context_), std::runtime_error,
+      "CalcCenterOfMassVelocity\\(\\): this MultibodyPlant contains only "
+      "world_body\\(\\) so its center of mass is undefined.");
+}
+
 class MultibodyPlantCenterOfMassTest : public ::testing::Test {
  public:
   void SetUp() override {
@@ -55,8 +65,8 @@ class MultibodyPlantCenterOfMassTest : public ::testing::Test {
     context_ = plant_.CreateDefaultContext();
   }
 
-  void CheckCom(const math::RigidTransform<double>& X_WS,
-                const math::RigidTransform<double>& X_WT) {
+  void CheckComPosition(const math::RigidTransform<double>& X_WS,
+                        const math::RigidTransform<double>& X_WT) {
     plant_.SetFreeBodyPose(context_.get(), plant_.GetBodyByName("Sphere1"),
                            X_WS);
     plant_.SetFreeBodyPose(context_.get(), plant_.GetBodyByName("Triangle1"),
@@ -74,6 +84,25 @@ class MultibodyPlantCenterOfMassTest : public ::testing::Test {
     EXPECT_TRUE(CompareMatrices(p_WCcm, p_WCcm_expected, 1e-15));
   }
 
+  void CheckComVelocity(const math::RigidTransform<double>& X_WS,
+                        const math::RigidTransform<double>& X_WT) {
+    plant_.SetFreeBodyPose(context_.get(), plant_.GetBodyByName("Sphere1"),
+                           X_WS);
+    plant_.SetFreeBodyPose(context_.get(), plant_.GetBodyByName("Triangle1"),
+                           X_WT);
+
+    const math::RotationMatrixd& R_WS = X_WS.rotation();
+    const math::RotationMatrixd& R_WT = X_WT.rotation();
+    const Eigen::Vector3d& p_WSo_W = X_WS.translation();
+    const Eigen::Vector3d& p_WTo_W = X_WT.translation();
+    const Eigen::Vector3d p_WCcm_expected =
+        ((p_WSo_W + R_WS * p_SScm_S_) * mass_S_ +
+            (p_WTo_W + R_WT * p_TTcm_T_) * mass_T_) /
+            (mass_S_ + mass_T_);
+    Eigen::Vector3d p_WCcm = plant_.CalcCenterOfMassVelocity(*context_);
+    EXPECT_TRUE(CompareMatrices(p_WCcm, p_WCcm_expected, 1e-15));
+  }
+
  protected:
   MultibodyPlant<double> plant_;
   std::unique_ptr<systems::Context<double>> context_;
@@ -86,7 +115,7 @@ class MultibodyPlantCenterOfMassTest : public ::testing::Test {
 };
 
 TEST_F(MultibodyPlantCenterOfMassTest, CenterOfMassPosition) {
-  // Try compute Center of Mass with no translation no rotation.
+  // Try compute center of mass position with no translation no rotation.
   Eigen::Vector3d p_WCcm = plant_.CalcCenterOfMassPosition(*context_);
   math::RigidTransformd X_WS0(
       math::RotationMatrixd(Eigen::Matrix3d::Identity()),
@@ -99,14 +128,15 @@ TEST_F(MultibodyPlantCenterOfMassTest, CenterOfMassPosition) {
       (mass_S_ + mass_T_);
   EXPECT_TRUE(CompareMatrices(p_WCcm, result, 1e-15));
 
-  // Try compute Center of Mass at random translation.
+  // Try compute center of mass position at random translation.
   Eigen::Vector3d p_WSo_W(1.1, 2.3, 3.7);
   Eigen::Vector3d p_WTo_W(-5.2, 10.4, -6.8);
   math::RigidTransformd X_WS1(
       math::RotationMatrixd(Eigen::Matrix3d::Identity()), p_WSo_W);
   math::RigidTransformd X_WT1(
       math::RotationMatrixd(Eigen::Matrix3d::Identity()), p_WTo_W);
-  CheckCom(X_WS1, X_WT1);
+  CheckComPosition(X_WS1, X_WT1);
+
 
   // Try empty model_instances.
   std::vector<ModelInstanceIndex> model_instances;
@@ -134,12 +164,44 @@ TEST_F(MultibodyPlantCenterOfMassTest, CenterOfMassPosition) {
   EXPECT_THROW(plant_.CalcCenterOfMassPosition(*context_, model_instances),
                std::runtime_error);
 
-  // Try compute Center of Mass at random translation and rotation.
+  // Try compute center of mass position at random translation and rotation.
   math::RigidTransformd X_WS2(math::RollPitchYawd(0.3, -1.5, 0.7),
                               Eigen::Vector3d(5.2, -3.1, 10.9));
   math::RigidTransformd X_WT2(math::RollPitchYawd(-2.3, -3.5, 1.2),
                               Eigen::Vector3d(-70.2, 9.8, 843.1));
-  CheckCom(X_WS2, X_WT2);
+  CheckComPosition(X_WS2, X_WT2);
+}
+
+TEST_F(MultibodyPlantCenterOfMassTest, CenterOfMassVelocity) {
+  // Try compute center of mass velocity with no velocity.
+  Eigen::Vector3d p_WCcm = plant_.CalcCenterOfMassVelocity(*context_);
+  Eigen::Vector3d result = Eigen::Vector3d::Zero();
+  EXPECT_TRUE(CompareMatrices(p_WCcm, result, 1e-15));
+
+  // Try empty model_instances.
+  std::vector<ModelInstanceIndex> model_instances;
+  DRAKE_EXPECT_THROWS_MESSAGE(
+      plant_.CalcCenterOfMassVelocity(*context_, model_instances),
+      std::runtime_error,
+      "CalcCenterOfMassVelocity\\(\\): you must provide at least one selected "
+      "body.");
+
+  // Try one instance in model_instances.
+
+  // Try all instances in model_instances.
+
+  // Try error instance in model_instances.
+  ModelInstanceIndex error_index(10);
+  model_instances.push_back(error_index);
+  EXPECT_THROW(plant_.CalcCenterOfMassVelocity(*context_, model_instances),
+               std::runtime_error);
+
+  // Try compute center of mass velocity at random translation and rotation.
+//  math::RigidTransformd X_WS2(math::RollPitchYawd(0.3, -1.5, 0.7),
+//                              Eigen::Vector3d(5.2, -3.1, 10.9));
+//  math::RigidTransformd X_WT2(math::RollPitchYawd(-2.3, -3.5, 1.2),
+//                              Eigen::Vector3d(-70.2, 9.8, 843.1));
+//  CheckComVelocity(X_WS2, X_WT2);
 }
 
 }  // namespace
