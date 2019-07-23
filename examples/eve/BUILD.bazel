@@ -26,6 +26,30 @@ drake_cc_library(
 )
 
 drake_cc_binary(
+    name = "run_eve_collocation",
+    srcs = ["run_eve_collocation.cc"],
+    data = [
+        "//manipulation/models/eve:models",
+        "//manipulation/models/qb_hand_description:models",
+    ],
+    deps = [
+        "//common:find_resource",
+        "//common:text_logging_gflags",
+        "//geometry:geometry_visualization",
+        "//lcm",
+        "//multibody/benchmarks/inclined_plane",
+        "//multibody/parsing",
+        "//multibody/plant",
+        "//multibody/plant:contact_results_to_lcm",
+        "//systems/analysis",
+        "//systems/controllers",
+        "//systems/primitives",
+        "//systems/rendering:pose_bundle_to_draw_message",
+        "@gflags",
+    ],
+)
+
+drake_cc_binary(
     name = "run_eve_mathematical_program",
     srcs = ["run_eve_mathematical_program.cc"],
     deps = [
