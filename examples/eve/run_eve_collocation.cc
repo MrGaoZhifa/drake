@@ -30,6 +30,8 @@
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/systems/primitives/constant_vector_source.h"
 #include "drake/systems/primitives/matrix_gain.h"
+#include "drake/examples/eve/eve_common.h"
+#include "drake/lcmt_viewer_draw.hpp"
 
 namespace drake {
 namespace examples {
@@ -78,16 +80,16 @@ DEFINE_bool(is_inclined_plane_half_space, true,
 DEFINE_double(init_height, 0.2, "Initial height for base.");
 
 
-class VelocityController : public systems::LeafSystem<double> {
+class VelocitySource : public systems::LeafSystem<double> {
  public:
-  VelocityController(MultibodyPlant<double>& plant,
-                  ModelInstanceIndex plant_instance)
-      : plant_(plant), plant_instance_(plant_instance) {
+  VelocitySource(MultibodyPlant<double>& plant,
+                  ModelInstanceIndex plant_instance, lcm::DrakeLcm& lcm)
+      : plant_(plant), plant_instance_(plant_instance), lcm_(lcm)  {
     this->DeclareVectorInputPort(
-        "input1", systems::BasicVector<double>(17));
+        "base_state", systems::BasicVector<double>(17));
     this->DeclareVectorOutputPort(
         "output1", systems::BasicVector<double>(plant.num_actuators()),
-        &VelocityController::remap_output);
+        &VelocitySource::remap_output);
   }
 
   void remap_output(const systems::Context<double>& context,
@@ -100,9 +102,113 @@ class VelocityController : public systems::LeafSystem<double> {
 
     drake::log()->info(input_value.transpose());
     drake::log()->info(output_value.transpose());
-    drake::log()->info("\n");
 
-//    plant_.SetVelocitiesInArray(plant_instance_, input_value, &output_value);
+    // Visualize frame attached to base.
+    std::vector<std::string> names;
+    std::vector<Eigen::Isometry3d> poses;
+    names.push_back("base_state");
+    math::RollPitchYawd rpy_base(Eigen::Quaterniond(input_value[0], input_value[1], input_value[2], input_value[3]));
+
+    Eigen::Isometry3d pose = Eigen::Translation3d(Eigen::Vector3d(input_value[4], input_value[5], 0.130256)) * 
+                             Eigen::AngleAxisd(rpy_base.yaw_angle(), Eigen::Vector3d::UnitZ());
+    poses.push_back(pose);
+
+    PublishFramesToLcm("DRAKE_DRAW_FRAMES", poses, names, &lcm_);
+    
+    Eigen::Vector3d state{rpy_base.yaw_angle(), input_value[4], input_value[5]};
+  }
+
+ private:
+  MultibodyPlant<double>& plant_;
+  ModelInstanceIndex plant_instance_;
+  lcm::DrakeLcm& lcm_;
+};
+
+// TODO: consider get rid of the output logic system.
+class WheelControllerLogic : public systems::LeafSystem<double> {
+ public:
+  WheelControllerLogic(MultibodyPlant<double>& plant,
+                  ModelInstanceIndex plant_instance)
+      : plant_(plant), plant_instance_(plant_instance) {
+    this->DeclareVectorInputPort(
+        "input1", systems::BasicVector<double>(2));
+    this->DeclareVectorOutputPort(
+        "output1", systems::BasicVector<double>(plant.num_actuators()),
+        &WheelControllerLogic::remap_output);
+  }
+
+  void remap_output(const systems::Context<double>& context,
+                    systems::BasicVector<double>* output_vector) const {
+    auto output_value = output_vector->get_mutable_value();
+    auto input_value = this->EvalVectorInput(context, 0)->get_value();
+    
+    output_value = input_value;
+  }
+
+ private:
+  MultibodyPlant<double>& plant_;
+  ModelInstanceIndex plant_instance_;
+};
+
+class WheelStateSelector : public systems::LeafSystem<double> {
+ public:
+  WheelStateSelector(MultibodyPlant<double>& plant,
+                  ModelInstanceIndex plant_instance)
+      : plant_(plant), plant_instance_(plant_instance) {
+    this->DeclareVectorInputPort(
+        "input1", systems::BasicVector<double>(plant_.num_multibody_states()));
+    this->DeclareVectorOutputPort(
+        "output1", systems::BasicVector<double>(4),
+        &WheelStateSelector::remap_output);
+  }
+
+  void remap_output(const systems::Context<double>& context,
+                    systems::BasicVector<double>* output_vector) const {
+    auto output_value = output_vector->get_mutable_value();
+    auto input_value = this->EvalVectorInput(context, 0)->get_value();
+
+    output_value = Eigen::Vector4d::Zero();
+    output_value[0] = input_value[15];
+    output_value[1] = input_value[16];
+    drake::log()->info(input_value.transpose());
+    drake::log()->info(output_value.transpose());
+  }
+
+ private:
+
+  MultibodyPlant<double>& plant_;
+  ModelInstanceIndex plant_instance_;
+};
+
+class WheelVelocityController : public systems::Diagram<double> {
+ public:
+  WheelVelocityController(MultibodyPlant<double>& plant,
+                  ModelInstanceIndex plant_instance)
+    : plant_(plant), plant_instance_(plant_instance) {
+    systems::DiagramBuilder<double> builder;
+
+    // Add wheel state selector.
+    const auto* const wss = builder.AddSystem<WheelStateSelector>(plant, plant_instance);
+
+    // Add PID controller.
+    const Eigen::VectorXd Kp = Eigen::VectorXd::Ones(2) * 8.0;
+    const Eigen::VectorXd Ki = Eigen::VectorXd::Ones(2) * 0.0;
+    const Eigen::VectorXd Kd = Eigen::VectorXd::Ones(2) * 0.0;
+    const auto* const wc = builder.AddSystem<systems::controllers::PidController<double>>(Kp, Ki, Kd);
+
+    // Add wheel control logic.
+    const auto* const wcl = builder.AddSystem<WheelControllerLogic>(plant, plant_instance);
+
+    // Expose Input and Output port.
+    builder.ExportInput(wss->get_input_port(0), "wheel_state");
+    builder.ExportInput(wc->get_input_port_desired_state(), "desired_wheel_state");
+    builder.ExportOutput(wcl->get_output_port(0), "wheel_control");
+
+    // Connect internal ports
+    builder.Connect(wss->get_output_port(0), wc->get_input_port_estimated_state());
+    builder.Connect(wc->get_output_port_control(), wcl->get_input_port(0));
+
+    builder.BuildInto(this);
   }
 
  private:
@@ -157,10 +263,17 @@ void DoMain() {
   }
 
   // Create the WheelController.
-  auto vc = builder.AddSystem<VelocityController>(*plant, plant_model_instance_index);
-  builder.Connect(plant->get_state_output_port(), vc->get_input_port(0));
-  builder.Connect(vc->get_output_port(0), plant->get_actuation_input_port());
+  lcm::DrakeLcm lcm;
+  // auto wc = builder.AddSystem<VelocitySource>(*plant, plant_model_instance_index, lcm);
+  auto wvc = builder.AddSystem<WheelVelocityController>(*plant, plant_model_instance_index);
+  builder.Connect(plant->get_state_output_port(), wvc->get_input_port(0));
+  builder.Connect(wvc->get_output_port(0), plant->get_actuation_input_port());
 
+  // Set PID desired states.
+  auto desired_base_source =
+        builder.AddSystem<systems::ConstantVectorSource<double>>(
+            Eigen::Vector4d(10,10,0,0)); // v_L, v_R, a_L, a_R.
+  builder.Connect(desired_base_source->get_output_port(), wvc->get_input_port(1));
 
   // Connect plant with scene_graph to get collision information.
   DRAKE_DEMAND(!!plant->get_source_id());

@@ -34,7 +34,6 @@
 #include "drake/systems/framework/leaf_system.h"
 #include "drake/examples/eve/eve_common.h"
 #include "drake/lcmt_viewer_draw.hpp"
-#include "drake/examples/eve/eve_common.h"
 #include "drake/systems/controllers/test/zmp_test_util.h"
 #include "drake/solvers/linear_system_solver.h"
 #include "drake/solvers/solve.h"
