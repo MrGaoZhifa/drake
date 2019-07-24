@@ -32,6 +32,7 @@
 #include "drake/systems/primitives/matrix_gain.h"
 #include "drake/examples/eve/eve_common.h"
 #include "drake/lcmt_viewer_draw.hpp"
+#include "drake/systems/primitives/trajectory_source.h"
 
 namespace drake {
 namespace examples {
@@ -79,6 +80,9 @@ DEFINE_bool(is_inclined_plane_half_space, true,
             "Is inclined plane a half-space (true) or box (false).");
 DEFINE_double(init_height, 0.2, "Initial height for base.");
 
+DEFINE_double(K1, 1, "The feedback for forward velocity.");
+DEFINE_double(K2, 1, "The feedback for rotational velocity.");
+DEFINE_double(K3, 1, "The feedback for rotational velocity");
 
 class VelocitySource : public systems::LeafSystem<double> {
  public:
@@ -86,36 +90,59 @@ class VelocitySource : public systems::LeafSystem<double> {
                   ModelInstanceIndex plant_instance, lcm::DrakeLcm& lcm)
       : plant_(plant), plant_instance_(plant_instance), lcm_(lcm)  {
     this->DeclareVectorInputPort(
-        "base_state", systems::BasicVector<double>(17));
+        "base_state", systems::BasicVector<double>(plant_.num_multibody_states()));
+    this->DeclareVectorInputPort(
+        "desired_traj", systems::BasicVector<double>(6));
     this->DeclareVectorOutputPort(
-        "output1", systems::BasicVector<double>(plant.num_actuators()),
+        "output1", systems::BasicVector<double>(4),
         &VelocitySource::remap_output);
   }
 
   void remap_output(const systems::Context<double>& context,
                     systems::BasicVector<double>* output_vector) const {
     auto output_value = output_vector->get_mutable_value();
-    auto input_value = this->EvalVectorInput(context, 0)->get_value();
-    (void) input_value;
-    output_value[0] = FLAGS_constant_pos;
-    output_value[1] = FLAGS_constant_pos;
-
-    drake::log()->info(input_value.transpose());
-    drake::log()->info(output_value.transpose());
+    auto state_value = this->EvalVectorInput(context, 0)->get_value();
+    auto desired_traj_value = this->EvalVectorInput(context, 1)->get_value();
 
     // Visualize frame attached to base.
     std::vector<std::string> names;
     std::vector<Eigen::Isometry3d> poses;
     names.push_back("base_state");
-    math::RollPitchYawd rpy_base(Eigen::Quaterniond(input_value[0], input_value[1], input_value[2], input_value[3]));
+    math::RollPitchYawd rpy_base(Eigen::Quaterniond(state_value[0], state_value[1], state_value[2], state_value[3]));
 
-    Eigen::Isometry3d pose = Eigen::Translation3d(Eigen::Vector3d(input_value[4], input_value[5], 0.130256)) * 
+    Eigen::Isometry3d pose = Eigen::Translation3d(Eigen::Vector3d(state_value[4], state_value[5], 0.130256)) * 
                              Eigen::AngleAxisd(rpy_base.yaw_angle(), Eigen::Vector3d::UnitZ());
     poses.push_back(pose);
 
     PublishFramesToLcm("DRAKE_DRAW_FRAMES", poses, names, &lcm_);
     
-    Eigen::Vector3d state{rpy_base.yaw_angle(), input_value[4], input_value[5]};
+    Eigen::Vector3d state{rpy_base.yaw_angle(), state_value[4], state_value[5]};
+    Eigen::Vector3d desired_state{std::atan2(desired_traj_value[3], desired_traj_value[2]), desired_traj_value[0], desired_traj_value[1]};
+    
+    Eigen::Matrix3d kinematic_constraint_matrix;
+    kinematic_constraint_matrix << 1, 0, 0,
+                                   0, std::cos(desired_state[0]), std::sin(desired_state[0]),
+                                   0, -std::sin(desired_state[0]), std::cos(desired_state[0]);
+
+    Eigen::Vector3d state_error = kinematic_constraint_matrix * (state - desired_state); (void)state_error;
+    Eigen::Vector2d feedforward_velocity{desired_traj_value.segment<2>(2).norm(), desired_traj_value.tail(2).dot(desired_traj_value.segment<2>(2).normalized())};
+    
+    // Modern Robotics P468 Eq.13.31
+    Eigen::Vector2d actual_velocity_input = feedforward_velocity - Eigen::Vector2d{
+      FLAGS_K1 * feedforward_velocity[0] * (state_error[1] + state_error[2] * std::tanh(state_error[0])) / std::cos(state_error[0]),
+      (FLAGS_K2 * feedforward_velocity[0] * state_error[2] + FLAGS_K3 * feedforward_velocity[0] * std::tanh(state_error[0])) * std::pow(std::cos(state_error[0]),2)
+    };
+    // Eigen::Vector2d actual_velocity_input = feedforward_velocity;
+    const double l = 0.26983;
+    const double r = 0.15;
+    Eigen::Vector2d actual_wheel_velocity{actual_velocity_input[0] - actual_velocity_input[1] * l, // left wheel velocity
+      actual_velocity_input[0] + actual_velocity_input[1] * l};// right wheel velocity
+
+    output_value.setZero();
+    output_value.head(2) = actual_wheel_velocity / r;
+
+    drake::log()->info("Desired velocity and acceleration:");
+    drake::log()->info(output_value.transpose());
   }
 
  private:
@@ -143,6 +170,8 @@ class WheelControllerLogic : public systems::LeafSystem<double> {
     auto input_value = this->EvalVectorInput(context, 0)->get_value();
     
     output_value = input_value;
+    drake::log()->info("Actual torque:");
+    drake::log()->info(output_value.transpose());
   }
 
  private:
@@ -170,8 +199,8 @@ class WheelStateSelector : public systems::LeafSystem<double> {
     output_value = Eigen::Vector4d::Zero();
     output_value[0] = input_value[15];
     output_value[1] = input_value[16];
+    
     drake::log()->info(input_value.transpose());
-    drake::log()->info(output_value.transpose());
   }
 
  private:
@@ -269,11 +298,44 @@ void DoMain() {
   builder.Connect(plant->get_state_output_port(), wvc->get_input_port(0));
   builder.Connect(wvc->get_output_port(0), plant->get_actuation_input_port());
 
-  // Set PID desired states.
-  auto desired_base_source =
-        builder.AddSystem<systems::ConstantVectorSource<double>>(
-            Eigen::Vector4d(10,10,0,0)); // v_L, v_R, a_L, a_R.
-  builder.Connect(desired_base_source->get_output_port(), wvc->get_input_port(1));
+  // // Set PID desired states.
+  // auto desired_base_source =
+  //       builder.AddSystem<systems::ConstantVectorSource<double>>(
+  //           Eigen::Vector4d(10,10,0,0)); // v_L, v_R, a_L, a_R.
+  // builder.Connect(desired_base_source->get_output_port(), wvc->get_input_port(1));
+
+  // // Design the straight trajectory to follow.
+  const std::vector<double> kTimes{0.0, 5.0, 10.0};
+  std::vector<Eigen::MatrixXd> knots(kTimes.size());
+  knots[0] = Eigen::Vector2d(0,0); // x, y;
+  knots[1] = Eigen::Vector2d(10,0);
+  knots[2] = Eigen::Vector2d(20,0);
+
+  // Design a curvy trajectory to follow.
+  // const std::vector<double> kTimes{0.0, 0.8, 2.0, 3.2, 4.0};
+  // std::vector<Eigen::MatrixXd> knots(kTimes.size());
+  // knots[0] = Eigen::Vector2d(0,   0);
+  // knots[1] = Eigen::Vector2d(0.5, 0);
+  // knots[2] = Eigen::Vector2d(3,   0);
+  // knots[3] = Eigen::Vector2d(5.5, 0);
+  // knots[4] = Eigen::Vector2d(6,   0);
+
+  trajectories::PiecewisePolynomial<double> trajectory =
+      trajectories::PiecewisePolynomial<double>::Pchip(kTimes, knots);
+
+  // The feedback controller that map trajectory tracking error to velocity input.
+  auto vs = builder.AddSystem<VelocitySource>(*plant, plant_model_instance_index, lcm);
+  builder.Connect(plant->get_state_output_port(), vs->get_input_port(0));
+  builder.Connect(vs->get_output_port(0), wvc->get_input_port(1));
+
+  // Adds a trajectory source for desired state.
+  auto traj_src = builder.AddSystem<systems::TrajectorySource<double>>(
+      trajectory, 2 /* outputs q + v + a*/);
+  traj_src->set_name("trajectory_source");
+  builder.Connect(traj_src->get_output_port(),
+                  vs->get_input_port(1));
+
+
 
   // Connect plant with scene_graph to get collision information.
   DRAKE_DEMAND(!!plant->get_source_id());
@@ -303,6 +365,7 @@ void DoMain() {
 //  drake::VectorX<double> velocities =
 //      Eigen::VectorXd::Ones(plant->num_velocities()) * -0.1;
 //  plant->SetVelocities(&plant_context, velocities);
+
 
   // Set up simulator.
   drake::log()->info("\nNow starts Simulation\n");
