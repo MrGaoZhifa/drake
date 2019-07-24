@@ -110,12 +110,33 @@ class VelocitySource : public systems::LeafSystem<double> {
     names.push_back("base_state");
     math::RollPitchYawd rpy_base(Eigen::Quaterniond(state_value[0], state_value[1], state_value[2], state_value[3]));
 
-    Eigen::Isometry3d pose = Eigen::Translation3d(Eigen::Vector3d(state_value[4], state_value[5], 0.130256)) * 
-                             Eigen::AngleAxisd(rpy_base.yaw_angle(), Eigen::Vector3d::UnitZ());
+    Eigen::Isometry3d pose = Eigen::Translation3d(Eigen::Vector3d(state_value[4], state_value[5], state_value[6])) * 
+                                      Eigen::AngleAxisd(rpy_base.yaw_angle(), Eigen::Vector3d::UnitZ());    
     poses.push_back(pose);
 
+    // Draw frame of where the desired base is.
+    names.push_back("desired_base_position");
+    Eigen::Isometry3d desired_pose = Eigen::Isometry3d::Identity();
+    desired_pose.translation().head(2) = desired_traj_value.head(2);
+    poses.push_back(desired_pose);
+
     PublishFramesToLcm("DRAKE_DRAW_FRAMES", poses, names, &lcm_);
+
+    // Draw arrows.
+    std::vector<Eigen::VectorXd> contact_points;
+    std::vector<Eigen::VectorXd> contact_forces;
+
+    // Visualize base position error.
+    Eigen::Vector3d e_base = Eigen::Vector3d::Zero();
+    Eigen::Vector3d p_base(state_value[4], state_value[5], state_value[6]);
+    e_base.head(2) = desired_traj_value.head(2) - p_base.head(2);
+    contact_points.push_back(p_base);
+    contact_forces.push_back(e_base);
+
+    PublishContactToLcm(contact_points, contact_forces, &lcm_);
     
+
+
     Eigen::Vector3d state{rpy_base.yaw_angle(), state_value[4], state_value[5]};
     Eigen::Vector3d desired_state{std::atan2(desired_traj_value[3], desired_traj_value[2]), desired_traj_value[0], desired_traj_value[1]};
     
@@ -128,9 +149,9 @@ class VelocitySource : public systems::LeafSystem<double> {
     Eigen::Vector2d feedforward_velocity{desired_traj_value.segment<2>(2).norm(), desired_traj_value.tail(2).dot(desired_traj_value.segment<2>(2).normalized())};
     
     // Modern Robotics P468 Eq.13.31
-    Eigen::Vector2d actual_velocity_input = feedforward_velocity - Eigen::Vector2d{
-      FLAGS_K1 * feedforward_velocity[0] * (state_error[1] + state_error[2] * std::tanh(state_error[0])) / std::cos(state_error[0]),
-      (FLAGS_K2 * feedforward_velocity[0] * state_error[2] + FLAGS_K3 * feedforward_velocity[0] * std::tanh(state_error[0])) * std::pow(std::cos(state_error[0]),2)
+    Eigen::Vector2d actual_velocity_input = Eigen::Vector2d{
+      (feedforward_velocity[0] - FLAGS_K1 * feedforward_velocity[0] * (state_error[1] + state_error[2] * std::tanh(state_error[0]))) / std::cos(state_error[0]),
+      feedforward_velocity[1] - (FLAGS_K2 * feedforward_velocity[0] * state_error[2] + FLAGS_K3 * feedforward_velocity[0] * std::tanh(state_error[0])) * std::pow(std::cos(state_error[0]),2)
     };
     // Eigen::Vector2d actual_velocity_input = feedforward_velocity;
     const double l = 0.26983;
@@ -141,7 +162,7 @@ class VelocitySource : public systems::LeafSystem<double> {
     output_value.setZero();
     output_value.head(2) = actual_wheel_velocity / r;
 
-    drake::log()->info("Desired velocity and acceleration:");
+    // drake::log()->info("Desired velocity and acceleration:");  
     drake::log()->info(output_value.transpose());
   }
 
@@ -170,7 +191,7 @@ class WheelControllerLogic : public systems::LeafSystem<double> {
     auto input_value = this->EvalVectorInput(context, 0)->get_value();
     
     output_value = input_value;
-    drake::log()->info("Actual torque:");
+    // drake::log()->info("Actual torque:");
     drake::log()->info(output_value.transpose());
   }
 
@@ -298,6 +319,11 @@ void DoMain() {
   builder.Connect(plant->get_state_output_port(), wvc->get_input_port(0));
   builder.Connect(wvc->get_output_port(0), plant->get_actuation_input_port());
 
+  // The feedback controller that map trajectory tracking error to velocity input.
+  auto vs = builder.AddSystem<VelocitySource>(*plant, plant_model_instance_index, lcm);
+  builder.Connect(plant->get_state_output_port(), vs->get_input_port(0));
+  builder.Connect(vs->get_output_port(0), wvc->get_input_port(1));
+
   // // Set PID desired states.
   // auto desired_base_source =
   //       builder.AddSystem<systems::ConstantVectorSource<double>>(
@@ -305,28 +331,23 @@ void DoMain() {
   // builder.Connect(desired_base_source->get_output_port(), wvc->get_input_port(1));
 
   // // Design the straight trajectory to follow.
-  const std::vector<double> kTimes{0.0, 5.0, 10.0};
-  std::vector<Eigen::MatrixXd> knots(kTimes.size());
-  knots[0] = Eigen::Vector2d(0,0); // x, y;
-  knots[1] = Eigen::Vector2d(10,0);
-  knots[2] = Eigen::Vector2d(20,0);
+  // const std::vector<double> kTimes{0.0, 5.0, 10.0};
+  // std::vector<Eigen::MatrixXd> knots(kTimes.size());
+  // knots[0] = Eigen::Vector2d(0,0); // x, y;
+  // knots[1] = Eigen::Vector2d(10,0);
+  // knots[2] = Eigen::Vector2d(20,0);
 
   // Design a curvy trajectory to follow.
-  // const std::vector<double> kTimes{0.0, 0.8, 2.0, 3.2, 4.0};
-  // std::vector<Eigen::MatrixXd> knots(kTimes.size());
-  // knots[0] = Eigen::Vector2d(0,   0);
-  // knots[1] = Eigen::Vector2d(0.5, 0);
-  // knots[2] = Eigen::Vector2d(3,   0);
-  // knots[3] = Eigen::Vector2d(5.5, 0);
-  // knots[4] = Eigen::Vector2d(6,   0);
+  const std::vector<double> kTimes{0.0, 0.8, 2.0, 3.2, 4.0};
+  std::vector<Eigen::MatrixXd> knots(kTimes.size());
+  knots[0] = Eigen::Vector2d(0,   0);
+  knots[1] = Eigen::Vector2d(0.5, 0);
+  knots[2] = Eigen::Vector2d(3,   0);
+  knots[3] = Eigen::Vector2d(5.5, 0);
+  knots[4] = Eigen::Vector2d(6,   0);
 
   trajectories::PiecewisePolynomial<double> trajectory =
       trajectories::PiecewisePolynomial<double>::Pchip(kTimes, knots);
-
-  // The feedback controller that map trajectory tracking error to velocity input.
-  auto vs = builder.AddSystem<VelocitySource>(*plant, plant_model_instance_index, lcm);
-  builder.Connect(plant->get_state_output_port(), vs->get_input_port(0));
-  builder.Connect(vs->get_output_port(0), wvc->get_input_port(1));
 
   // Adds a trajectory source for desired state.
   auto traj_src = builder.AddSystem<systems::TrajectorySource<double>>(
