@@ -80,7 +80,7 @@ DEFINE_bool(is_inclined_plane_half_space, true,
             "Is inclined plane a half-space (true) or box (false).");
 DEFINE_double(init_height, 0.2, "Initial height for base.");
 
-DEFINE_double(K1, 1, "The feedback for forward velocity.");
+DEFINE_double(K1, 5, "The feedback for error of x and y.");
 DEFINE_double(K2, 1, "The feedback for rotational velocity.");
 DEFINE_double(K3, 1, "The feedback for rotational velocity");
 
@@ -103,12 +103,21 @@ class VelocitySource : public systems::LeafSystem<double> {
     auto output_value = output_vector->get_mutable_value();
     auto state_value = this->EvalVectorInput(context, 0)->get_value();
     auto desired_traj_value = this->EvalVectorInput(context, 1)->get_value();
+//    drake::log()->info(desired_traj_value.transpose());
+
+    math::RollPitchYawd rpy_base(Eigen::Quaterniond(state_value[0], state_value[1], state_value[2], state_value[3]));
+    math::RollPitchYawd rpy_desired_base(Eigen::Quaterniond(state_value[0], state_value[1], state_value[2], state_value[3]));
+
+    Eigen::Vector3d state{rpy_base.yaw_angle(), state_value[4], state_value[5]};
+    Eigen::Vector3d desired_state{
+        std::atan2(desired_traj_value[3], desired_traj_value[2]),
+        desired_traj_value[0], desired_traj_value[1]};
+
 
     // Visualize frame attached to base.
     std::vector<std::string> names;
     std::vector<Eigen::Isometry3d> poses;
     names.push_back("base_state");
-    math::RollPitchYawd rpy_base(Eigen::Quaterniond(state_value[0], state_value[1], state_value[2], state_value[3]));
 
     Eigen::Isometry3d pose = Eigen::Translation3d(Eigen::Vector3d(state_value[4], state_value[5], state_value[6])) * 
                                       Eigen::AngleAxisd(rpy_base.yaw_angle(), Eigen::Vector3d::UnitZ());    
@@ -116,8 +125,8 @@ class VelocitySource : public systems::LeafSystem<double> {
 
     // Draw frame of where the desired base is.
     names.push_back("desired_base_position");
-    Eigen::Isometry3d desired_pose = Eigen::Isometry3d::Identity();
-    desired_pose.translation().head(2) = desired_traj_value.head(2);
+    Eigen::Isometry3d desired_pose = Eigen::Translation3d(Eigen::Vector3d(desired_traj_value[0], desired_traj_value[1], state_value[6]))
+                    * Eigen::AngleAxisd(desired_state[0], Eigen::Vector3d::UnitZ());
     poses.push_back(desired_pose);
 
     PublishFramesToLcm("DRAKE_DRAW_FRAMES", poses, names, &lcm_);
@@ -134,19 +143,21 @@ class VelocitySource : public systems::LeafSystem<double> {
     contact_forces.push_back(e_base);
 
     PublishContactToLcm(contact_points, contact_forces, &lcm_);
-    
 
 
-    Eigen::Vector3d state{rpy_base.yaw_angle(), state_value[4], state_value[5]};
-    Eigen::Vector3d desired_state{std::atan2(desired_traj_value[3], desired_traj_value[2]), desired_traj_value[0], desired_traj_value[1]};
-    
+    // Error dynamics controller design.
     Eigen::Matrix3d kinematic_constraint_matrix;
     kinematic_constraint_matrix << 1, 0, 0,
                                    0, std::cos(desired_state[0]), std::sin(desired_state[0]),
                                    0, -std::sin(desired_state[0]), std::cos(desired_state[0]);
 
-    Eigen::Vector3d state_error = kinematic_constraint_matrix * (state - desired_state); (void)state_error;
-    Eigen::Vector2d feedforward_velocity{desired_traj_value.segment<2>(2).norm(), desired_traj_value.tail(2).dot(desired_traj_value.segment<2>(2).normalized())};
+    Eigen::Vector3d state_error = kinematic_constraint_matrix * (state - desired_state);
+    state_error[0] = std::max(-M_PI*0.4, std::min(M_PI*0.4, state_error[0]));
+//    state_error = Eigen::Vector3d::Zero();
+
+    Eigen::Vector2d feedforward_velocity{desired_traj_value.segment<2>(2).norm(),
+       (desired_traj_value.tail(2) -
+       desired_traj_value.tail(2).dot(desired_traj_value.segment<2>(2).normalized()) * desired_traj_value.segment<2>(2).normalized()).norm()};
     
     // Modern Robotics P468 Eq.13.31
     Eigen::Vector2d actual_velocity_input = Eigen::Vector2d{
@@ -338,11 +349,11 @@ void DoMain() {
   // knots[2] = Eigen::Vector2d(20,0);
 
   // Design a curvy trajectory to follow.
-  const std::vector<double> kTimes{0.0, 0.8, 2.0, 3.2, 4.0};
+  const std::vector<double> kTimes{0.0, 1, 5.0, 9, 10.0};
   std::vector<Eigen::MatrixXd> knots(kTimes.size());
   knots[0] = Eigen::Vector2d(0,   0);
   knots[1] = Eigen::Vector2d(0.5, 0);
-  knots[2] = Eigen::Vector2d(3,   0);
+  knots[2] = Eigen::Vector2d(3,   0.5);
   knots[3] = Eigen::Vector2d(5.5, 0);
   knots[4] = Eigen::Vector2d(6,   0);
 
