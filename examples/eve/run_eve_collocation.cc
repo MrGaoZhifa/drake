@@ -81,8 +81,8 @@ DEFINE_bool(is_inclined_plane_half_space, true,
 DEFINE_double(init_height, 0.2, "Initial height for base.");
 
 DEFINE_double(K1, 5, "The feedback for error of x and y.");
-DEFINE_double(K2, 1, "The feedback for rotational velocity.");
-DEFINE_double(K3, 1, "The feedback for rotational velocity");
+DEFINE_double(K2, 10, "The feedback for rotational velocity.");
+DEFINE_double(K3, 10, "The feedback for rotational velocity");
 
 class VelocitySource : public systems::LeafSystem<double> {
  public:
@@ -154,6 +154,7 @@ class VelocitySource : public systems::LeafSystem<double> {
     Eigen::Vector3d state_error = kinematic_constraint_matrix * (state - desired_state);
     state_error[0] = std::max(-M_PI*0.4, std::min(M_PI*0.4, state_error[0]));
 //    state_error = Eigen::Vector3d::Zero();
+    drake::log()->info(state_error.transpose());
 
     Eigen::Vector2d feedforward_velocity{desired_traj_value.segment<2>(2).norm(),
        (desired_traj_value.tail(2) -
@@ -164,6 +165,7 @@ class VelocitySource : public systems::LeafSystem<double> {
       (feedforward_velocity[0] - FLAGS_K1 * feedforward_velocity[0] * (state_error[1] + state_error[2] * std::tanh(state_error[0]))) / std::cos(state_error[0]),
       feedforward_velocity[1] - (FLAGS_K2 * feedforward_velocity[0] * state_error[2] + FLAGS_K3 * feedforward_velocity[0] * std::tanh(state_error[0])) * std::pow(std::cos(state_error[0]),2)
     };
+
     // Eigen::Vector2d actual_velocity_input = feedforward_velocity;
     const double l = 0.26983;
     const double r = 0.15;
@@ -231,7 +233,8 @@ class WheelStateSelector : public systems::LeafSystem<double> {
     output_value = Eigen::Vector4d::Zero();
     output_value[0] = input_value[15];
     output_value[1] = input_value[16];
-    
+
+    drake::log()->info("\n");
     drake::log()->info(input_value.transpose());
   }
 
@@ -254,7 +257,7 @@ class WheelVelocityController : public systems::Diagram<double> {
     // Add PID controller.
     const Eigen::VectorXd Kp = Eigen::VectorXd::Ones(2) * 8.0;
     const Eigen::VectorXd Ki = Eigen::VectorXd::Ones(2) * 0.0;
-    const Eigen::VectorXd Kd = Eigen::VectorXd::Ones(2) * 0.0;
+    const Eigen::VectorXd Kd = Eigen::VectorXd::Ones(2) * 1.0;
     const auto* const wc = builder.AddSystem<systems::controllers::PidController<double>>(Kp, Ki, Kd);
 
     // Add wheel control logic.
@@ -349,7 +352,10 @@ void DoMain() {
   // knots[2] = Eigen::Vector2d(20,0);
 
   // Design a curvy trajectory to follow.
-  const std::vector<double> kTimes{0.0, 1, 5.0, 9, 10.0};
+  std::vector<double> kTimes{0.0, 1.0, 5.0, 9.0, 10.0};
+  for (size_t i = 0; i < kTimes.size(); ++i) {
+    kTimes[i] = kTimes[i]*0.5;
+  }
   std::vector<Eigen::MatrixXd> knots(kTimes.size());
   knots[0] = Eigen::Vector2d(0,   0);
   knots[1] = Eigen::Vector2d(0.5, 0);

@@ -59,6 +59,10 @@
      <geometry>
        <sphere radius="0.15"/>
      </geometry>
+     <drake_compliance>
+       <static_friction>0.99</static_friction>
+       <dynamic_friction>0.99</dynamic_friction>
+     </drake_compliance>
    </collision>
   </link>
   <joint name="j_r_wheel_y" type="revolute">
@@ -93,6 +97,10 @@
      <geometry>
        <sphere radius="0.15"/>
      </geometry>
+     <drake_compliance>
+       <static_friction>0.99</static_friction>
+       <dynamic_friction>0.99</dynamic_friction>
+     </drake_compliance>
    </collision>
   </link>
 
