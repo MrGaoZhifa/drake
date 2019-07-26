@@ -94,8 +94,8 @@ class WheelControllerLogic : public systems::LeafSystem<double> {
     auto input_value = this->EvalVectorInput(context, 0)->get_value();
     (void) input_value;
     output_value.setZero();
-    output_value[6] = 10-input_value[0];
-    output_value[7] = 10+input_value[0];
+    output_value[0] = 2;
+    output_value[1] = 2;
     drake::log()->info(input_value.transpose());
     drake::log()->info(output_value.transpose());
     drake::log()->info("\n");
@@ -125,7 +125,7 @@ class WheelStateSelector : public systems::LeafSystem<double> {
     auto output_value = output_vector->get_mutable_value();
     auto input_value = this->EvalVectorInput(context, 0)->get_value();
 //    (void) input_value;
-    drake::log()->info(output_value.transpose());
+//    drake::log()->info(output_value.transpose());
 //    output_value.setZero();
     output_value[0] = input_value[5];
     output_value[1] = input_value[34];
@@ -199,7 +199,8 @@ void DoMain() {
 
   const std::string full_name = FindResourceOrThrow(
       "drake/manipulation/models/eve/"
-      "urdf/eve_7dof_arms_relative_base_collision.urdf");
+//      "urdf/eve_7dof_arms_relative_base_collision.urdf");
+      "sdf/eve_7dof_arms_relative_base_sphere_collision.sdf");
 
   ModelInstanceIndex plant_model_instance_index =
       parser.AddModelFromFile(full_name);
@@ -224,7 +225,8 @@ void DoMain() {
 
   const std::string fake_full_name = FindResourceOrThrow(
       "drake/manipulation/models/eve/"
-      "urdf/eve_7dof_arms_relative_base_collision.urdf");
+//      "urdf/eve_7dof_arms_relative_base_collision.urdf");
+      "sdf/eve_7dof_arms_relative_base_no_collision.sdf");
 
   ModelInstanceIndex fake_plant_model_instance_index =
       fake_parser.AddModelFromFile(fake_full_name);
@@ -262,8 +264,8 @@ void DoMain() {
     //    Eigen::VectorXd u = Eigen::VectorXd::Zero(plant.num_actuators());
     //    plant.get_joint_actuator(a).set_actuation_vector(u_instance, &u);
     //    drake::log()->info(u.transpose());
-
-    drake::log()->info(
+    if (index < fake_plant.num_joints())
+      drake::log()->info(
         "FAKE PLANT JOINT: " + fake_plant.get_joint_actuator(a).joint().name() +
         " has actuator " + fake_plant.get_joint_actuator(a).name());
   }
@@ -275,7 +277,7 @@ void DoMain() {
         "PLANT JOINT: " + plant.get_joint(j).name() + ", position@ " +
         std::to_string(plant.get_joint(j).position_start()) + ", velocity@ " +
         std::to_string(plant.get_joint(j).velocity_start()));
-    if (index <= fake_plant.num_joints())
+    if (index < fake_plant.num_joints())
       drake::log()->info(
           "FAKE PLANT JOINT: " + fake_plant.get_joint(j).name() +
           ", position@" +
@@ -283,20 +285,23 @@ void DoMain() {
           ", velocity@" +
           std::to_string(fake_plant.get_joint(j).velocity_start()));
   }
+  drake::log()->info("MakeActuationMatrix() = B matrix");
   drake::log()->info(plant.MakeActuationMatrix());
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // Diagram build starts.
+
+
+
 
   // Create InverseDynamicsController using fake_plant.
   const int Q = plant.num_positions();
   const int V = plant.num_velocities();
   const int U = fake_plant.num_actuators();
   Eigen::VectorXd Kp_ = Eigen::VectorXd::Ones(U) * 10.0;
+  Kp_.head(6) = Eigen::VectorXd::Ones(6) * 100.0;
   Eigen::VectorXd Ki_ = Eigen::VectorXd::Ones(U) * 0.0;
   Eigen::VectorXd Kd_ = Eigen::VectorXd::Ones(U) * 1.0;
-  // Cancel the PID for wheel to purely apply torque.
-  Kp_(fake_plant.GetJointByName("j_r_wheel_y").velocity_start()) = 0.0;
-  Kp_(fake_plant.GetJointByName("j_l_wheel_y").velocity_start()) = 0.0;
-  Kd_(fake_plant.GetJointByName("j_r_wheel_y").velocity_start()) = 0.0;
-  Kd_(fake_plant.GetJointByName("j_l_wheel_y").velocity_start()) = 0.0;
 
   auto feed_forward_controller =
       builder
@@ -316,17 +321,16 @@ void DoMain() {
   // Select plant states and feed into controller with fake_plant.
   Eigen::MatrixXd feedback_joints_selector =
       Eigen::MatrixXd::Zero(2 * U, Q + V);
-  for (multibody::JointIndex j(0); j < plant.num_joints(); ++j) {
-    // Get rid of the feedback states of wheel state
-//    if (plant.get_joint(j).name() == "j_l_wheel_y" ||
-//        plant.get_joint(j).name() == "j_r_wheel_y")
-//      continue;
-    feedback_joints_selector(fake_plant.get_joint(j).position_start(),
-                             plant.get_joint(j).position_start()) = 1;
+  for (multibody::JointActuatorIndex a(0); a < fake_plant.num_actuators(); ++a) {
+    std::string fake_joint_name = fake_plant.get_joint_actuator(a).joint().name();
     feedback_joints_selector(
-        fake_plant.get_joint(j).velocity_start() + fake_plant.num_positions(),
-        plant.get_joint(j).velocity_start() + plant.num_positions()) = 1;
+        fake_plant.get_joint_actuator(a).joint().position_start(),
+        plant.GetJointByName(fake_joint_name).position_start()) = 1;
+    feedback_joints_selector(
+        fake_plant.get_joint_actuator(a).joint().velocity_start() + fake_plant.num_positions(),
+        plant.GetJointByName(fake_joint_name).velocity_start() + plant.num_positions()) = 1;
   }
+  drake::log()->info("feedback_joints_selector");
   drake::log()->info(feedback_joints_selector);
   // Use Gain system to convert plant output to IDC state input
   systems::MatrixGain<double>& select_IDC_states =
@@ -341,8 +345,15 @@ void DoMain() {
   // Select generalized control signal and feed into plant.
   Eigen::MatrixXd generalized_actuation_selector =
       Eigen::MatrixXd::Zero(plant.num_velocities(), U);
-  generalized_actuation_selector.bottomRightCorner(U, U) =
-      Eigen::MatrixXd::Identity(U, U);
+//  generalized_actuation_selector.bottomRightCorner(U, U) =
+//      Eigen::MatrixXd::Identity(U, U);
+  for (multibody::JointIndex j(0); j < fake_plant.num_velocities(); ++j) {
+    std::string fake_joint_name = fake_plant.get_joint(j).name();
+    generalized_actuation_selector(
+        plant.GetJointByName(fake_joint_name).velocity_start(),
+        fake_plant.get_joint(j).velocity_start()) = 1;
+  }
+  drake::log()->info("generalized_actuation_selector");
   drake::log()->info(generalized_actuation_selector);
   systems::MatrixGain<double>* select_generalized_actuation_states =
       builder.AddSystem<systems::MatrixGain<double>>(
@@ -408,6 +419,9 @@ void DoMain() {
   builder.Connect(plant.get_state_output_port(), wc->get_input_port(0));
   builder.Connect(wc->get_output_port(0), plant.get_actuation_input_port());
 
+  // Diagram build finish.
+  ////////////////////////////////////////////////////////////////////////////////
+
   // Connect plant with scene_graph to get collision information.
   DRAKE_DEMAND(!!plant.get_source_id());
   builder.Connect(
@@ -435,7 +449,7 @@ void DoMain() {
 
   // Set robot init velocity for every joint.
   drake::VectorX<double> velocities =
-      Eigen::VectorXd::Ones(plant.num_velocities()) * -0.0;
+      Eigen::VectorXd::Ones(plant.num_velocities()) * 0.0;
   plant.SetVelocities(&plant_context, velocities);
 
   // Set up simulator.
