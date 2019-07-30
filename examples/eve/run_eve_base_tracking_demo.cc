@@ -351,17 +351,26 @@ void DoMain() {
   // knots[1] = Eigen::Vector2d(10,0);
   // knots[2] = Eigen::Vector2d(20,0);
 
-  // Design a curvy trajectory to follow.
-  std::vector<double> kTimes{0.0, 1.0, 5.0, 9.0, 10.0};
-  for (size_t i = 0; i < kTimes.size(); ++i) {
-    kTimes[i] = kTimes[i]*0.5;
-  }
+  // Design straight line.
+  const std::vector<double> kTimes{0.0, 1.0, 2.0, 3.0, 4.0};
   std::vector<Eigen::MatrixXd> knots(kTimes.size());
-  knots[0] = Eigen::Vector2d(0,   0);
-  knots[1] = Eigen::Vector2d(0.5, 0);
-  knots[2] = Eigen::Vector2d(3,   0.5);
-  knots[3] = Eigen::Vector2d(5.5, 0);
-  knots[4] = Eigen::Vector2d(6,   0);
+  knots[0] = Eigen::Vector2d(0,0);
+  knots[1] = Eigen::Vector2d(0.5,0);
+  knots[2] = Eigen::Vector2d(3,0);
+  knots[3] = Eigen::Vector2d(5.5,0);
+  knots[4] = Eigen::Vector2d(6,0);
+
+  // Design a curvy trajectory to follow.
+//  std::vector<double> kTimes{0.0, 1.0, 5.0, 9.0, 10.0};
+//  for (size_t i = 0; i < kTimes.size(); ++i) {
+//    kTimes[i] = kTimes[i]*0.5;
+//  }
+//  std::vector<Eigen::MatrixXd> knots(kTimes.size());
+//  knots[0] = Eigen::Vector2d(0,   0);
+//  knots[1] = Eigen::Vector2d(0.5, 0);
+//  knots[2] = Eigen::Vector2d(3,   0.5);
+//  knots[3] = Eigen::Vector2d(5.5, 0);
+//  knots[4] = Eigen::Vector2d(6,   0);
 
   trajectories::PiecewisePolynomial<double> trajectory =
       trajectories::PiecewisePolynomial<double>::Pchip(kTimes, knots);

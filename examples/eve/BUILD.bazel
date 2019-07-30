@@ -26,8 +26,8 @@ drake_cc_library(
 )
 
 drake_cc_binary(
-    name = "run_eve_collocation",
-    srcs = ["run_eve_collocation.cc"],
+    name = "run_eve_base_tracking_demo",
+    srcs = ["run_eve_base_tracking_demo.cc"],
     data = [
         "//manipulation/models/eve:models",
         "//manipulation/models/qb_hand_description:models",
@@ -199,12 +199,14 @@ drake_cc_binary(
 
 drake_cc_binary(
     name = "run_eve_wheel_demo",
+    testonly = 1,
     srcs = ["run_eve_wheel_demo.cc"],
     data = [
         "//manipulation/models/eve:models",
         "//manipulation/models/qb_hand_description:models",
     ],
     deps = [
+        ":eve_common",
         "//common:find_resource",
         "//common:text_logging_gflags",
         "//geometry:geometry_visualization",
@@ -213,8 +215,10 @@ drake_cc_binary(
         "//multibody/parsing",
         "//multibody/plant",
         "//multibody/plant:contact_results_to_lcm",
+        "//solvers:solve",
         "//systems/analysis",
         "//systems/controllers",
+        "//systems/controllers:zmp_test_util",
         "//systems/primitives",
         "//systems/rendering:pose_bundle_to_draw_message",
         "@gflags",

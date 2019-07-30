@@ -417,13 +417,23 @@ void DoMain() {
 //  builder.Connect(plant->get_state_output_port(), cop2com->get_input_port(cop2com->mbp_state_port_index));
 
   // Design the trajectory to follow.
+//  const std::vector<double> kTimes{0.0, 1.0, 2.0, 3.0, 4.0};
+//  std::vector<Eigen::MatrixXd> knots(kTimes.size());
+//  knots[0] = Eigen::Vector2d(0,0);
+//  knots[1] = Eigen::Vector2d(0.5,0);
+//  knots[2] = Eigen::Vector2d(3,0);
+//  knots[3] = Eigen::Vector2d(5.5,0);
+//  knots[4] = Eigen::Vector2d(6,0);
+
+  // Design the trajectory to follow.
   const std::vector<double> kTimes{0.0, 1.0, 2.0, 3.0, 4.0};
   std::vector<Eigen::MatrixXd> knots(kTimes.size());
   knots[0] = Eigen::Vector2d(0,0);
-  knots[1] = Eigen::Vector2d(0.5,0);
-  knots[2] = Eigen::Vector2d(3,0);
-  knots[3] = Eigen::Vector2d(5.5,0);
-  knots[4] = Eigen::Vector2d(6,0);
+  knots[1] = Eigen::Vector2d(0,0);
+  knots[2] = Eigen::Vector2d(0,0);
+  knots[3] = Eigen::Vector2d(0,0);
+  knots[4] = Eigen::Vector2d(0,0);
+
 //  trajectories::PiecewisePolynomial<double> trajectory =
 //      trajectories::PiecewisePolynomial<double>::FirstOrderHold(kTimes, knots);
   trajectories::PiecewisePolynomial<double> trajectory =
