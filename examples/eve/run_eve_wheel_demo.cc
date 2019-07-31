@@ -303,9 +303,8 @@ class JInverse : public systems::LeafSystem<double> {
         + 0 * (Eigen::Vector3d{0, 0, 0} - velocities.segment<3>(39));
     Eigen::MatrixXd Q = 1 * Eigen::MatrixXd::Identity(X_size, X_size);
     Q.block<6,6>(0,0) = 100 * Eigen::MatrixXd::Identity(6, 6); // Joints on the leg.
-    Q(0,0) = 10; //
-    Q(1,1) = 10;
-    Q(5,5) = 1000;
+    Q(0,0) = 10; Q(1,1) = 10; // ankle x and y.
+    Q(5,5) = 1000; // pelvis Z.
     Q.block<10,10>(11,11) = 1000 * Eigen::MatrixXd::Identity(6, 6); // Joints on arms except shoulder.
     Q(7,7) = 1000; // Head not move.
     Eigen::VectorXd c = -2 * Q * Xd; // Penalize the (X_ - Xd)' * Q * (X_ - Xd)
@@ -759,6 +758,9 @@ void DoMain() {
   constant_pos_value[plant->GetJointByName("j_hip_y").position_start()-9] = 0.43;
   constant_pos_value[plant->GetJointByName("j_knee_y").position_start()-9] = -0.91;
   constant_pos_value[plant->GetJointByName("j_ankle_y").position_start()-9] = 0.47;
+  constant_pos_value[plant->GetJointByName("j_hip_y").position_start()-9] = 0.76;
+  constant_pos_value[plant->GetJointByName("j_knee_y").position_start()-9] = -1.59;
+  constant_pos_value[plant->GetJointByName("j_ankle_y").position_start()-9] = 0.82;
   constant_pos_value[plant->GetJointByName("j_l_shoulder_x").position_start()-9] = 1.57;
   constant_pos_value[plant->GetJointByName("j_r_shoulder_x").position_start()-9] = -1.57;
   auto desired_constant_source =
@@ -857,7 +859,7 @@ void DoMain() {
   // Design a curvy trajectory to follow.
   std::vector<double> kTimes{0.0, 2.0, 4.0, 6.0, 8.0, 10, 12};
   for (size_t i = 0; i < kTimes.size(); ++i) {
-    kTimes[i] = kTimes[i] * 0.8;
+    kTimes[i] = kTimes[i] * 0.7;
   }
   std::vector<Eigen::MatrixXd> knots(kTimes.size());
   knots[0] = Eigen::Vector2d(0, 0);
@@ -889,7 +891,8 @@ void DoMain() {
                   j_inverse->get_input_port(j_inverse->base_trajectory_port_index));
 
   // Given the trajectory of reference ZMP, we compute the CoM trajectory.
-  const double z_cm = 0.76;
+//  const double z_cm = 0.76;
+  const double z_cm = 0.67;
   Eigen::Vector4d x0(0, 0, 0, 0);
   systems::controllers::ZMPPlanner zmp_planner;
   zmp_planner.Plan(trajectory, x0, z_cm);
@@ -963,6 +966,9 @@ void DoMain() {
   positions[plant->GetJointByName("j_hip_y").position_start()] = 0.43;
   positions[plant->GetJointByName("j_knee_y").position_start()] = -0.91;
   positions[plant->GetJointByName("j_ankle_y").position_start()] = 0.47;
+  positions[plant->GetJointByName("j_hip_y").position_start()] = 0.76;
+  positions[plant->GetJointByName("j_knee_y").position_start()] = -1.59;
+  positions[plant->GetJointByName("j_ankle_y").position_start()] = 0.82;
   positions[plant->GetJointByName("j_l_shoulder_x").position_start()] = 1.57;
   positions[plant->GetJointByName("j_r_shoulder_x").position_start()] = -1.57;
   positions[6] = FLAGS_init_height;
