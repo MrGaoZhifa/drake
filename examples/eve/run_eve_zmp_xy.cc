@@ -507,30 +507,37 @@ void DoMain() {
 //  builder.Connect(cop2com->get_output_port(0), j_inverse->get_input_port(j_inverse->com_acceleration_port_index));
 //  builder.Connect(plant->get_state_output_port(), cop2com->get_input_port(cop2com->mbp_state_port_index));
 
-//  // Design the trajectory to follow.
-//  const std::vector<double> kTimes{0.0, 0.8, 2.0, 3.2, 4.0};
-//  std::vector<Eigen::MatrixXd> knots(kTimes.size());
-//  knots[0] = Eigen::Vector2d(0,0);
-//  knots[1] = Eigen::Vector2d(0.5,0);
-//  knots[2] = Eigen::Vector2d(3,0.5);
-//  knots[3] = Eigen::Vector2d(5.5,0);
-//  knots[4] = Eigen::Vector2d(6,0);
-
   // Design the trajectory to follow.
-  const std::vector<double> kTimes{0.0, 1.0, 2.0, 3.0, 4.0};
+  const std::vector<double> kTimes{0.0, 0.8, 2.0, 3.2, 4.0};
   std::vector<Eigen::MatrixXd> knots(kTimes.size());
   knots[0] = Eigen::Vector2d(0,0);
-  knots[1] = Eigen::Vector2d(0,0);
-  knots[2] = Eigen::Vector2d(0,0);
-  knots[3] = Eigen::Vector2d(0,0);
-  knots[4] = Eigen::Vector2d(0,0);
+  knots[1] = Eigen::Vector2d(0.5,0);
+  knots[2] = Eigen::Vector2d(3,0.5);
+  knots[3] = Eigen::Vector2d(5.5,0);
+  knots[4] = Eigen::Vector2d(6,0);
 
-//  const std::vector<double> kTimes{0.0, 1.0, 2.0, 3.0};
+//  // Design the trajectory to follow.
+//  const std::vector<double> kTimes{0.0, 1.0, 2.0, 3.0, 4.0};
 //  std::vector<Eigen::MatrixXd> knots(kTimes.size());
 //  knots[0] = Eigen::Vector2d(0,0);
-//  knots[1] = Eigen::Vector2d(0.5,-0.0);
-//  knots[2] = Eigen::Vector2d(2.5,0.0);
-//  knots[3] = Eigen::Vector2d(3,0);
+//  knots[1] = Eigen::Vector2d(0,0);
+//  knots[2] = Eigen::Vector2d(0,0);
+//  knots[3] = Eigen::Vector2d(0,0);
+//  knots[4] = Eigen::Vector2d(0,0);
+
+//  // Design a curvy trajectory to follow.
+//  std::vector<double> kTimes{0.0, 2.0, 4.0, 6.0, 8.0, 10, 12};
+//  for (size_t i = 0; i < kTimes.size(); ++i) {
+//    kTimes[i] = kTimes[i] * 0.9;
+//  }
+//  std::vector<Eigen::MatrixXd> knots(kTimes.size());
+//  knots[0] = Eigen::Vector2d(0, 0);
+//  knots[1] = Eigen::Vector2d(1, 0);
+//  knots[2] = Eigen::Vector2d(3, 0.5);
+//  knots[3] = Eigen::Vector2d(5, 0);
+//  knots[4] = Eigen::Vector2d(7, -0.5);
+//  knots[5] = Eigen::Vector2d(9, 0);
+//  knots[6] = Eigen::Vector2d(10, 0);
 
 //  trajectories::PiecewisePolynomial<double> trajectory =
 //      trajectories::PiecewisePolynomial<double>::FirstOrderHold(kTimes, knots);

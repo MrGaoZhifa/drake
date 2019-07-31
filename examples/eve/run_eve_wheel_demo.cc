@@ -260,8 +260,8 @@ class JInverse : public systems::LeafSystem<double> {
 //    int pris_y_position_index = plant_.GetJointByName("pris_y").position_start();
     int pris_x_position_index = 3;
     int pris_y_position_index = 4;
-//    auto positions = plant_.GetPositions(*plant_context_, plant_instance_);
-//    auto velocities = plant_.GetVelocities(*plant_context_, plant_instance_);
+    auto positions = plant_.GetPositions(*plant_context_, plant_instance_);
+    auto velocities = plant_.GetVelocities(*plant_context_, plant_instance_);
 
     // Feedback on base acceleration to follow base trajectory.
     double base_acc_x = base_trajectory_value(4);
@@ -297,9 +297,18 @@ class JInverse : public systems::LeafSystem<double> {
     const int X_size = Jcm_trimed.cols();
     auto X_ = prog.NewContinuousVariables(X_size, "X");
     // Add quadratic cost.
+    Eigen::VectorXd Xd = Eigen::VectorXd::Zero(X_size);
+    drake::log()->info(positions.segment<3>(10));
+    Xd.segment<3>(1) = 0 * (Eigen::Vector3d{0.43, -0.91, 0.47} - positions.segment<3>(10));
+        + 0 * (Eigen::Vector3d{0, 0, 0} - velocities.segment<3>(39));
     Eigen::MatrixXd Q = 1 * Eigen::MatrixXd::Identity(X_size, X_size);
-    Q.block<6,6>(0,0) = 10 * Eigen::MatrixXd::Identity(6, 6);
-    Eigen::VectorXd c = Eigen::VectorXd::Zero(X_size);
+    Q.block<6,6>(0,0) = 100 * Eigen::MatrixXd::Identity(6, 6); // Joints on the leg.
+    Q(0,0) = 10; //
+    Q(1,1) = 10;
+    Q(5,5) = 1000;
+    Q.block<10,10>(11,11) = 1000 * Eigen::MatrixXd::Identity(6, 6); // Joints on arms except shoulder.
+    Q(7,7) = 1000; // Head not move.
+    Eigen::VectorXd c = -2 * Q * Xd; // Penalize the (X_ - Xd)' * Q * (X_ - Xd)
     prog.AddQuadraticCost(Q, c, X_);
     prog.AddLinearEqualityConstraint(Jcm_trimed * X_, b);
     // Allow the upper body to keep up straight.
@@ -733,11 +742,11 @@ void DoMain() {
   const int V = plant->num_velocities();
   const int U = fake_plant.num_actuators();
   Eigen::VectorXd Kp_ = Eigen::VectorXd::Ones(U) * 10.0;
-  Kp_.head(6) = Eigen::VectorXd::Ones(6) * 100.0;
+//  Kp_.head(6) = Eigen::VectorXd::Ones(6) * 100.0;
   Eigen::VectorXd Ki_ = Eigen::VectorXd::Ones(U) * 0.0;
   Eigen::VectorXd Kd_ = Eigen::VectorXd::Ones(U) * 1.0;
-  Kp_.setZero();
-  Kd_.setZero();
+//  Kp_.setZero();
+//  Kd_.setZero();
 
   auto feed_forward_controller =
       builder
@@ -747,6 +756,11 @@ void DoMain() {
   // Set desired position [q,v]' for IDC as feedback reference.
   VectorX<double> constant_pos_value =
       VectorX<double>::Ones(2 * U) * FLAGS_constant_pos;
+  constant_pos_value[plant->GetJointByName("j_hip_y").position_start()-9] = 0.43;
+  constant_pos_value[plant->GetJointByName("j_knee_y").position_start()-9] = -0.91;
+  constant_pos_value[plant->GetJointByName("j_ankle_y").position_start()-9] = 0.47;
+  constant_pos_value[plant->GetJointByName("j_l_shoulder_x").position_start()-9] = 1.57;
+  constant_pos_value[plant->GetJointByName("j_r_shoulder_x").position_start()-9] = -1.57;
   auto desired_constant_source =
       builder.AddSystem<systems::ConstantVectorSource<double>>(
           constant_pos_value);
@@ -831,26 +845,28 @@ void DoMain() {
 //  knots[3] = Eigen::Vector2d(1.5,0);
 //  knots[4] = Eigen::Vector2d(2.0,0);
 
-  // Design the straight trajectory to follow.
-  const std::vector<double> kTimes{0.0, 2.0, 4.0, 6.0, 8.0};
-  std::vector<Eigen::MatrixXd> knots(kTimes.size());
-  knots[0] = Eigen::Vector2d(0,0);
-  knots[1] = Eigen::Vector2d(1,0);
-  knots[2] = Eigen::Vector2d(3,0);
-  knots[3] = Eigen::Vector2d(5,0);
-  knots[4] = Eigen::Vector2d(6,0);
-
-//  // Design a curvy trajectory to follow.
-//  std::vector<double> kTimes{0.0, 1.0, 5.0, 9.0, 10.0};
-//  for (size_t i = 0; i < kTimes.size(); ++i) {
-//    kTimes[i] = kTimes[i]*0.5;
-//  }
+//  // Design the straight trajectory to follow.
+//  const std::vector<double> kTimes{0.0, 2.0, 4.0, 6.0, 8.0};
 //  std::vector<Eigen::MatrixXd> knots(kTimes.size());
-//  knots[0] = Eigen::Vector2d(0,   0);
-//  knots[1] = Eigen::Vector2d(1, 0);
-//  knots[2] = Eigen::Vector2d(3,   0.5);
-//  knots[3] = Eigen::Vector2d(5, 0);
-//  knots[4] = Eigen::Vector2d(6,   0);
+//  knots[0] = Eigen::Vector2d(0,0);
+//  knots[1] = Eigen::Vector2d(1,0);
+//  knots[2] = Eigen::Vector2d(3,0);
+//  knots[3] = Eigen::Vector2d(5,0);
+//  knots[4] = Eigen::Vector2d(6,0);
+
+  // Design a curvy trajectory to follow.
+  std::vector<double> kTimes{0.0, 2.0, 4.0, 6.0, 8.0, 10, 12};
+  for (size_t i = 0; i < kTimes.size(); ++i) {
+    kTimes[i] = kTimes[i] * 0.8;
+  }
+  std::vector<Eigen::MatrixXd> knots(kTimes.size());
+  knots[0] = Eigen::Vector2d(0, 0);
+  knots[1] = Eigen::Vector2d(1, 0);
+  knots[2] = Eigen::Vector2d(3, 0.5);
+  knots[3] = Eigen::Vector2d(5, 0);
+  knots[4] = Eigen::Vector2d(7, -0.5);
+  knots[5] = Eigen::Vector2d(9, 0);
+  knots[6] = Eigen::Vector2d(10, 0);
 
   trajectories::PiecewisePolynomial<double> trajectory =
       trajectories::PiecewisePolynomial<double>::Pchip(kTimes, knots);
@@ -873,7 +889,7 @@ void DoMain() {
                   j_inverse->get_input_port(j_inverse->base_trajectory_port_index));
 
   // Given the trajectory of reference ZMP, we compute the CoM trajectory.
-  const double z_cm = 0.7;
+  const double z_cm = 0.76;
   Eigen::Vector4d x0(0, 0, 0, 0);
   systems::controllers::ZMPPlanner zmp_planner;
   zmp_planner.Plan(trajectory, x0, z_cm);
@@ -947,6 +963,8 @@ void DoMain() {
   positions[plant->GetJointByName("j_hip_y").position_start()] = 0.43;
   positions[plant->GetJointByName("j_knee_y").position_start()] = -0.91;
   positions[plant->GetJointByName("j_ankle_y").position_start()] = 0.47;
+  positions[plant->GetJointByName("j_l_shoulder_x").position_start()] = 1.57;
+  positions[plant->GetJointByName("j_r_shoulder_x").position_start()] = -1.57;
   positions[6] = FLAGS_init_height;
   plant->SetPositions(&plant_context, positions);
   // Measure and report the CoM position.
