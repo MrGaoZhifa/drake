@@ -39,6 +39,8 @@
 #include "drake/solvers/linear_system_solver.h"
 #include "drake/solvers/solve.h"
 
+#include <algorithm>
+
 namespace drake {
 namespace examples {
 namespace eve {
@@ -51,10 +53,10 @@ DEFINE_double(constant_pos, 0.0,
               "Suggested load is in the order of 0.01 Nm. When input value"
               "equals to 0 (default), the program runs a passive simulation.");
 
-DEFINE_double(simulation_time, 3,
+DEFINE_double(simulation_time, 10,
               "Desired duration of the simulation in seconds");
 
-DEFINE_double(max_time_step, 1.0e-3,
+DEFINE_double(max_time_step, 2.0e-3,
               "Simulation time step used for integrator.");
 
 DEFINE_double(gravity, 9.8, "Value of gravity in the direction of -z.");
@@ -83,10 +85,10 @@ DEFINE_bool(is_inclined_plane_half_space, true,
 DEFINE_double(init_height, 0.13, "Initial height for base.");
 
 DEFINE_double(K1, 5, "The feedback control for base error of x and y.");
-DEFINE_double(K2, 10, "The feedback control for base rotational velocity.");
-DEFINE_double(K3, 10, "The feedback control for base rotational velocity");
-DEFINE_double(com_kp, 2.0, "Used on feedback of com position to track com acceleration.");
-DEFINE_double(com_kd, 0.1, "Used on feedback of com velocity to track com acceleration.");
+DEFINE_double(K2, 30, "The feedback control for base rotational velocity.");
+DEFINE_double(K3, 30, "The feedback control for base rotational velocity");
+DEFINE_double(com_kp, 30, "Used on feedback of com position to track com acceleration.");
+DEFINE_double(com_kd, 10, "Used on feedback of com velocity to track com acceleration.");
 DEFINE_double(base_kp, 2.0, "Used on feedback of base position to track base acceleration.");
 DEFINE_double(base_kd, 0.1, "Used on feedback of base velocity to track base acceleration.");
 
@@ -514,8 +516,8 @@ class VelocitySource : public systems::LeafSystem<double> {
     output_value.setZero();
     output_value.head(2) = actual_wheel_velocity / r;
 
-     drake::log()->info("Desired velocity and acceleration:");
-    drake::log()->info(output_value.transpose());
+    drake::log()->info("feedback base velocity:");
+    drake::log()->info(actual_velocity_input.transpose());
   }
 
  private:
@@ -543,7 +545,7 @@ class WheelControllerLogic : public systems::LeafSystem<double> {
     auto input_value = this->EvalVectorInput(context, 0)->get_value();
 
     output_value.setZero();
-    output_value.head(2) = input_value;
+    output_value.head(2) = input_value.cwiseMax(Eigen::Vector2d::Ones()*-20).cwiseMin(Eigen::Vector2d::Ones()*20);
     drake::log()->info("Actual torque:");
     drake::log()->info(output_value.transpose());
   }
@@ -574,8 +576,8 @@ class WheelStateSelector : public systems::LeafSystem<double> {
     output_value[0] = input_value[plant_.num_positions() + plant_.GetJointByName("j_l_wheel_y").velocity_start()];
     output_value[1] = input_value[plant_.num_positions() + plant_.GetJointByName("j_r_wheel_y").velocity_start()];
 
-    drake::log()->info("\n");
-//    drake::log()->info(input_value.transpose());
+    drake::log()->info("\nActual velocity and acceleration");
+    drake::log()->info(output_value.transpose());
   }
 
  private:
@@ -595,9 +597,9 @@ class WheelVelocityController : public systems::Diagram<double> {
     const auto* const wss = builder.AddSystem<WheelStateSelector>(plant, plant_instance);
 
     // Add PID controller.
-    const Eigen::VectorXd Kp = Eigen::VectorXd::Ones(2) * 8.0;
+    const Eigen::VectorXd Kp = Eigen::VectorXd::Ones(2) * 5.0;
     const Eigen::VectorXd Ki = Eigen::VectorXd::Ones(2) * 0.0;
-    const Eigen::VectorXd Kd = Eigen::VectorXd::Ones(2) * 1.0;
+    const Eigen::VectorXd Kd = Eigen::VectorXd::Ones(2) * 2.0;
     const auto* const wc = builder.AddSystem<systems::controllers::PidController<double>>(Kp, Ki, Kd);
 
     // Add wheel control logic.
@@ -740,10 +742,10 @@ void DoMain() {
   const int Q = plant->num_positions();
   const int V = plant->num_velocities();
   const int U = fake_plant.num_actuators();
-  Eigen::VectorXd Kp_ = Eigen::VectorXd::Ones(U) * 10.0;
+  Eigen::VectorXd Kp_ = Eigen::VectorXd::Ones(U) * 20.0;
 //  Kp_.head(6) = Eigen::VectorXd::Ones(6) * 100.0;
   Eigen::VectorXd Ki_ = Eigen::VectorXd::Ones(U) * 0.0;
-  Eigen::VectorXd Kd_ = Eigen::VectorXd::Ones(U) * 1.0;
+  Eigen::VectorXd Kd_ = Eigen::VectorXd::Ones(U) * 2.0;
 //  Kp_.setZero();
 //  Kd_.setZero();
 
@@ -761,6 +763,9 @@ void DoMain() {
   constant_pos_value[plant->GetJointByName("j_hip_y").position_start()-9] = 0.76;
   constant_pos_value[plant->GetJointByName("j_knee_y").position_start()-9] = -1.59;
   constant_pos_value[plant->GetJointByName("j_ankle_y").position_start()-9] = 0.82;
+  constant_pos_value[plant->GetJointByName("j_hip_y").position_start()-9] = 0.96;
+  constant_pos_value[plant->GetJointByName("j_knee_y").position_start()-9] = -2.00;
+  constant_pos_value[plant->GetJointByName("j_ankle_y").position_start()-9] = 1.04;
   constant_pos_value[plant->GetJointByName("j_l_shoulder_x").position_start()-9] = 1.57;
   constant_pos_value[plant->GetJointByName("j_r_shoulder_x").position_start()-9] = -1.57;
   auto desired_constant_source =
@@ -859,7 +864,7 @@ void DoMain() {
   // Design a curvy trajectory to follow.
   std::vector<double> kTimes{0.0, 2.0, 4.0, 6.0, 8.0, 10, 12};
   for (size_t i = 0; i < kTimes.size(); ++i) {
-    kTimes[i] = kTimes[i] * 0.7;
+    kTimes[i] = kTimes[i] * 0.6;
   }
   std::vector<Eigen::MatrixXd> knots(kTimes.size());
   knots[0] = Eigen::Vector2d(0, 0);
@@ -892,10 +897,11 @@ void DoMain() {
 
   // Given the trajectory of reference ZMP, we compute the CoM trajectory.
 //  const double z_cm = 0.76;
-  const double z_cm = 0.67;
+//  const double z_cm = 0.67;
+  const double z_cm = 0.593561;
   Eigen::Vector4d x0(0, 0, 0, 0);
   systems::controllers::ZMPPlanner zmp_planner;
-  zmp_planner.Plan(trajectory, x0, z_cm);
+  zmp_planner.Plan(trajectory, x0, z_cm, 9.81, Eigen::Matrix2d::Identity(), 0.1 * Eigen::Matrix2d::Identity());
   double sample_dt = 0.01;
   systems::controllers::ZMPTestTraj result =
       systems::controllers::SimulateZMPPolicy(zmp_planner, x0, sample_dt, 0.02);
@@ -969,6 +975,9 @@ void DoMain() {
   positions[plant->GetJointByName("j_hip_y").position_start()] = 0.76;
   positions[plant->GetJointByName("j_knee_y").position_start()] = -1.59;
   positions[plant->GetJointByName("j_ankle_y").position_start()] = 0.82;
+  positions[plant->GetJointByName("j_hip_y").position_start()] = 0.96;
+  positions[plant->GetJointByName("j_knee_y").position_start()] = -2.00;
+  positions[plant->GetJointByName("j_ankle_y").position_start()] = 1.04;
   positions[plant->GetJointByName("j_l_shoulder_x").position_start()] = 1.57;
   positions[plant->GetJointByName("j_r_shoulder_x").position_start()] = -1.57;
   positions[6] = FLAGS_init_height;
@@ -991,7 +1000,8 @@ void DoMain() {
   simulator.set_publish_every_time_step(true);
   simulator.set_target_realtime_rate(FLAGS_target_realtime_rate);
   simulator.Initialize();
-  simulator.AdvanceTo(FLAGS_simulation_time);
+//  simulator.AdvanceTo(FLAGS_simulation_time);
+  simulator.AdvanceTo(kTimes.back());
 }
 
 }  // namespace eve
