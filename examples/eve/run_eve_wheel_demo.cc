@@ -38,6 +38,7 @@
 #include "drake/systems/controllers/test/zmp_test_util.h"
 #include "drake/solvers/linear_system_solver.h"
 #include "drake/solvers/solve.h"
+#include "drake/common/proto/call_python.h"
 
 #include <algorithm>
 
@@ -47,6 +48,7 @@ namespace eve {
 using drake::multibody::BodyIndex;
 using drake::multibody::ModelInstanceIndex;
 using drake::multibody::MultibodyPlant;
+using common::CallPython;
 
 DEFINE_double(constant_pos, 0.0,
               "the constant load on each joint, Unit [Nm]."
@@ -87,10 +89,13 @@ DEFINE_double(init_height, 0.13, "Initial height for base.");
 DEFINE_double(K1, 5, "The feedback control for base error of x and y.");
 DEFINE_double(K2, 30, "The feedback control for base rotational velocity.");
 DEFINE_double(K3, 30, "The feedback control for base rotational velocity");
-DEFINE_double(com_kp, 30, "Used on feedback of com position to track com acceleration.");
+DEFINE_double(com_kp, 10, "Used on feedback of com position to track com acceleration.");
 DEFINE_double(com_kd, 10, "Used on feedback of com velocity to track com acceleration.");
 DEFINE_double(base_kp, 2.0, "Used on feedback of base position to track base acceleration.");
 DEFINE_double(base_kd, 0.1, "Used on feedback of base velocity to track base acceleration.");
+DEFINE_double(circle_radius, 1.0, "Used on feedback of base velocity to track base acceleration.");
+DEFINE_double(inteval, 0.4, "Used on feedback of base velocity to track base acceleration.");
+DEFINE_double(precision, 16, "Used on feedback of base velocity to track base acceleration.");
 
 //class WheelControllerLogic : public systems::LeafSystem<double> {
 // public:
@@ -760,9 +765,9 @@ void DoMain() {
   constant_pos_value[plant->GetJointByName("j_hip_y").position_start()-9] = 0.43;
   constant_pos_value[plant->GetJointByName("j_knee_y").position_start()-9] = -0.91;
   constant_pos_value[plant->GetJointByName("j_ankle_y").position_start()-9] = 0.47;
-  constant_pos_value[plant->GetJointByName("j_hip_y").position_start()-9] = 0.76;
-  constant_pos_value[plant->GetJointByName("j_knee_y").position_start()-9] = -1.59;
-  constant_pos_value[plant->GetJointByName("j_ankle_y").position_start()-9] = 0.82;
+//  constant_pos_value[plant->GetJointByName("j_hip_y").position_start()-9] = 0.76;
+//  constant_pos_value[plant->GetJointByName("j_knee_y").position_start()-9] = -1.59;
+//  constant_pos_value[plant->GetJointByName("j_ankle_y").position_start()-9] = 0.82;
   constant_pos_value[plant->GetJointByName("j_hip_y").position_start()-9] = 0.96;
   constant_pos_value[plant->GetJointByName("j_knee_y").position_start()-9] = -2.00;
   constant_pos_value[plant->GetJointByName("j_ankle_y").position_start()-9] = 1.04;
@@ -852,28 +857,52 @@ void DoMain() {
 //  knots[3] = Eigen::Vector2d(1.5,0);
 //  knots[4] = Eigen::Vector2d(2.0,0);
 
-//  // Design the straight trajectory to follow.
-//  const std::vector<double> kTimes{0.0, 2.0, 4.0, 6.0, 8.0};
-//  std::vector<Eigen::MatrixXd> knots(kTimes.size());
-//  knots[0] = Eigen::Vector2d(0,0);
-//  knots[1] = Eigen::Vector2d(1,0);
-//  knots[2] = Eigen::Vector2d(3,0);
-//  knots[3] = Eigen::Vector2d(5,0);
-//  knots[4] = Eigen::Vector2d(6,0);
-
-  // Design a curvy trajectory to follow.
-  std::vector<double> kTimes{0.0, 2.0, 4.0, 6.0, 8.0, 10, 12};
+  // Design the straight trajectory to follow.
+  std::vector<double> kTimes{0.0, 2.0, 4.0, 6.0, 9.0};
   for (size_t i = 0; i < kTimes.size(); ++i) {
-    kTimes[i] = kTimes[i] * 0.6;
+    kTimes[i] = kTimes[i] * 0.7;
   }
   std::vector<Eigen::MatrixXd> knots(kTimes.size());
-  knots[0] = Eigen::Vector2d(0, 0);
-  knots[1] = Eigen::Vector2d(1, 0);
-  knots[2] = Eigen::Vector2d(3, 0.5);
-  knots[3] = Eigen::Vector2d(5, 0);
-  knots[4] = Eigen::Vector2d(7, -0.5);
-  knots[5] = Eigen::Vector2d(9, 0);
-  knots[6] = Eigen::Vector2d(10, 0);
+  knots[0] = Eigen::Vector2d(0,0);
+  knots[1] = Eigen::Vector2d(1,0);
+  knots[2] = Eigen::Vector2d(4,0);
+  knots[3] = Eigen::Vector2d(7,0);
+  knots[4] = Eigen::Vector2d(8,0);
+
+//  // Design a curvy trajectory to follow.
+//  std::vector<double> kTimes{0.0, 2.0, 4.0, 6.0, 8.0, 10, 12};
+//  for (size_t i = 0; i < kTimes.size(); ++i) {
+//    kTimes[i] = kTimes[i] * 0.7;
+//  }
+//  std::vector<Eigen::MatrixXd> knots(kTimes.size());
+//  knots[0] = Eigen::Vector2d(0, 0);
+//  knots[1] = Eigen::Vector2d(1, 0);
+//  knots[2] = Eigen::Vector2d(3, 0.5);
+//  knots[3] = Eigen::Vector2d(5, 0);
+//  knots[4] = Eigen::Vector2d(7, -0.5);
+//  knots[5] = Eigen::Vector2d(9, 0);
+//  knots[6] = Eigen::Vector2d(10, 0);
+
+//  // Design circle.
+//  std::vector<double> kTimes;
+//  std::vector<Eigen::MatrixXd> knots;
+//
+//  for (int i = 0; i<FLAGS_precision; i++) {
+//    kTimes.push_back(i * FLAGS_inteval);
+//    double theta = M_PI*2 / FLAGS_precision * i;
+//    knots.push_back(
+//        Eigen::Vector2d(FLAGS_circle_radius*std::sin(theta),
+//        FLAGS_circle_radius*std::cos(theta)-FLAGS_circle_radius));
+//  }
+//  for (int i = 0; i<FLAGS_precision; i++) {
+//    kTimes.push_back((i+FLAGS_precision) * FLAGS_inteval);
+//    double theta = M_PI*2 / FLAGS_precision * i;
+//    knots.push_back(
+//        Eigen::Vector2d(FLAGS_circle_radius*std::sin(theta),
+//        -FLAGS_circle_radius*std::cos(theta)+FLAGS_circle_radius));
+//  }
+//  kTimes.push_back(2*FLAGS_precision*FLAGS_inteval);
+//  knots.push_back(Eigen::Vector2d(0,0));
 
   trajectories::PiecewisePolynomial<double> trajectory =
       trajectories::PiecewisePolynomial<double>::Pchip(kTimes, knots);
@@ -901,7 +930,7 @@ void DoMain() {
   const double z_cm = 0.593561;
   Eigen::Vector4d x0(0, 0, 0, 0);
   systems::controllers::ZMPPlanner zmp_planner;
-  zmp_planner.Plan(trajectory, x0, z_cm, 9.81, Eigen::Matrix2d::Identity(), 0.1 * Eigen::Matrix2d::Identity());
+  zmp_planner.Plan(trajectory, x0, z_cm, 9.81, Eigen::Matrix2d::Identity(), 0.2 * Eigen::Matrix2d::Identity());
   double sample_dt = 0.01;
   systems::controllers::ZMPTestTraj result =
       systems::controllers::SimulateZMPPolicy(zmp_planner, x0, sample_dt, 0.02);
@@ -928,12 +957,12 @@ void DoMain() {
   // Visualize the CoM and ZMP trajectory.
   std::vector<std::string> names;
   std::vector<Eigen::Isometry3d> poses;
-  for (int t = 0; t < N; t=t+5) {
-    names.push_back("CoM" + std::to_string(int(t)));
-    Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
-    pose.translation() = Eigen::Vector3d(result.nominal_com(0, t), result.nominal_com(1, t), z_cm);
-    poses.push_back(pose);
-  }
+//  for (int t = 0; t < N; t=t+5) {
+//    names.push_back("CoM" + std::to_string(int(t)));
+//    Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
+//    pose.translation() = Eigen::Vector3d(result.nominal_com(0, t), result.nominal_com(1, t), z_cm);
+//    poses.push_back(pose);
+//  }
   for (int t = 0; t < N; t=t+5) {
     names.push_back("ZMP" + std::to_string(int(t)));
     Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
@@ -972,9 +1001,9 @@ void DoMain() {
   positions[plant->GetJointByName("j_hip_y").position_start()] = 0.43;
   positions[plant->GetJointByName("j_knee_y").position_start()] = -0.91;
   positions[plant->GetJointByName("j_ankle_y").position_start()] = 0.47;
-  positions[plant->GetJointByName("j_hip_y").position_start()] = 0.76;
-  positions[plant->GetJointByName("j_knee_y").position_start()] = -1.59;
-  positions[plant->GetJointByName("j_ankle_y").position_start()] = 0.82;
+//  positions[plant->GetJointByName("j_hip_y").position_start()] = 0.76;
+//  positions[plant->GetJointByName("j_knee_y").position_start()] = -1.59;
+//  positions[plant->GetJointByName("j_ankle_y").position_start()] = 0.82;
   positions[plant->GetJointByName("j_hip_y").position_start()] = 0.96;
   positions[plant->GetJointByName("j_knee_y").position_start()] = -2.00;
   positions[plant->GetJointByName("j_ankle_y").position_start()] = 1.04;
@@ -1002,6 +1031,14 @@ void DoMain() {
   simulator.Initialize();
 //  simulator.AdvanceTo(FLAGS_simulation_time);
   simulator.AdvanceTo(kTimes.back());
+
+
+//  CallPython("figure", 1);
+//  CallPython("clf");
+//  CallPython("plot", kTimes, kTimes);
+//  CallPython("setvars", "x_val", kTimes, "w_val", kTimes);
+//  CallPython("plt.xlabel", "x");
+//  CallPython("plt.ylabel", "w, I_B");
 }
 
 }  // namespace eve

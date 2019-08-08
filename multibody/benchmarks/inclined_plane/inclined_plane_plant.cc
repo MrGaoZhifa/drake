@@ -25,7 +25,7 @@ void AddInclinedPlaneAndGravityToPlant(
       RotationMatrix<double>::MakeYRotation(inclined_plane_angle);
 
   // The inclined plane A is either a half-space or a box.
-  const Vector4<double> green(0.5, 1.0, 0.5, 1.0);
+  const Vector4<double> green(0.5, 1.0, 0.5, 0.2);
   if (inclined_plane_dimensions == nullopt) {
     // Set A's geometry so its top surface passes through world origin Wo.
     const Vector3<double> p_WoAo_W = Vector3<double>::Zero();

@@ -30,6 +30,7 @@ PublishFramesToLcm("DRAKE_DRAW_TRAJECTORY", {
 #include "drake/systems/primitives/trajectory_source.h"
 #include "drake/systems/framework/event_status.h"
 #include "drake/systems/controllers/test/zmp_test_util.h"
+#include "drake/common/proto/call_python.h"
 
 DEFINE_double(target_realtime_rate, 1.0,
               "Rate at which to run the simulation, relative to realtime");
@@ -40,6 +41,7 @@ DEFINE_double(max_time_step, 1.0e-3,
 namespace drake {
 namespace examples {
 namespace eve {
+using common::CallPython;
 
 class DisplayTrajectoryInSim : public systems::LeafSystem<double> {
  public:
@@ -253,30 +255,39 @@ void DoMain3() {
 // The method verified.
 void DoMain4() {
 
-  // Design the trajectory to follow.
-  const std::vector<double> kTimes{0.0, 1.0, 2.0, 3.0, 3.5};
+//  // Design the trajectory to follow.
+//  const std::vector<double> kTimes{0.0, 1.0, 2.0, 3.0, 3.5};
+//  std::vector<Eigen::MatrixXd> knots(kTimes.size());
+//  knots[0] = Eigen::Vector2d(0,0);
+//  knots[1] = Eigen::Vector2d(0.5,-1.0);
+//  knots[2] = Eigen::Vector2d(2.5,1.0);
+//  knots[3] = Eigen::Vector2d(3,0);
+//  knots[4] = Eigen::Vector2d(3,0);
+
+  std::vector<double> kTimes{0.0, 2.0, 4.0, 6.0, 8.0, 10, 12};
+  for (size_t i = 0; i < kTimes.size(); ++i) {
+    kTimes[i] = kTimes[i] * 0.6;
+  }
   std::vector<Eigen::MatrixXd> knots(kTimes.size());
-  knots[0] = Eigen::Vector2d(0,0);
-  knots[1] = Eigen::Vector2d(0.5,-1.0);
-  knots[2] = Eigen::Vector2d(2.5,1.0);
-  knots[3] = Eigen::Vector2d(3,0);
-  knots[4] = Eigen::Vector2d(3,0);
+  knots[0] = Eigen::Vector2d(0, 0);
+  knots[1] = Eigen::Vector2d(1, 0);
+  knots[2] = Eigen::Vector2d(3, 0.5);
+  knots[3] = Eigen::Vector2d(5, 0);
+  knots[4] = Eigen::Vector2d(7, -0.5);
+  knots[5] = Eigen::Vector2d(9, 0);
+  knots[6] = Eigen::Vector2d(10, 0);
+
   trajectories::PiecewisePolynomial<double> trajectory =
       trajectories::PiecewisePolynomial<double>::Pchip(kTimes, knots);
-//  Eigen::VectorXd knot_dot_start = Eigen::VectorXd::Zero(2);
-//  Eigen::MatrixXd knot_dot_end = Eigen::VectorXd::Zero(2);
-//  trajectories::PiecewisePolynomial<double> trajectory =
-//      trajectories::PiecewisePolynomial<double>::Cubic(kTimes, knots, knot_dot_start, knot_dot_end);
 
+  const double z_cm = 0.593561;
   Eigen::Vector4d x0(0, 0, 0, 0);
-  const double z = 0.6;
   systems::controllers::ZMPPlanner zmp_planner;
-  zmp_planner.Plan(trajectory, x0, z);
-
+  zmp_planner.Plan(trajectory, x0, z_cm, 9.81, Eigen::Matrix2d::Identity(), 0.5 * Eigen::Matrix2d::Identity());
   double sample_dt = 0.01;
-
   systems::controllers::ZMPTestTraj result =
-      systems::controllers::SimulateZMPPolicy(zmp_planner, x0, sample_dt, 0.1);
+      systems::controllers::SimulateZMPPolicy(zmp_planner, x0, sample_dt, 0.02);
+//      systems::controllers::SimulateZMPPolicy(zmp_planner, x0, sample_dt, 0.1);
 
   lcm::DrakeLcm lcm;
 
@@ -286,10 +297,80 @@ void DoMain4() {
   for (int t = 0; t < N; t=t+3) {
     names.push_back("CoM" + std::to_string(int(t)));
     Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
-    pose.translation() = Eigen::Vector3d(result.nominal_com(0, t), result.nominal_com(1, t), z);
+    pose.translation() = Eigen::Vector3d(result.nominal_com(0, t), result.nominal_com(1, t), z_cm);
     poses.push_back(pose);
   }
   for (int t = 0; t < N; t=t+3) {
+    names.push_back("ZMP" + std::to_string(int(t)));
+    Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
+    pose.translation() = Eigen::Vector3d(result.desired_zmp(0, t), result.desired_zmp(1, t), 0);
+    poses.push_back(pose);
+  }
+
+  PublishFramesToLcm("DRAKE_DRAW_FRAMES", poses, names, &lcm);
+
+
+  Eigen::VectorXd times = Eigen::VectorXd::Zero(N);
+  Eigen::VectorXd zmp_x = Eigen::VectorXd::Zero(N);
+  Eigen::VectorXd com_x = Eigen::VectorXd::Zero(N);
+  for (int i = 0;  i<N; i++) {
+    times(i) = 0.01*i;
+    zmp_x(i) = result.desired_zmp(1, i);
+    com_x(i) = result.nominal_com(1, i);
+  }
+  CallPython("figure", 1);
+  CallPython("clf");
+  CallPython("plot", times, zmp_x);
+  CallPython("plot", times, com_x);
+//  CallPython("setvars", "time", times, "w_val", zmp_x);
+  CallPython("plt.xlabel", "time");
+  CallPython("plt.ylabel", "y");
+}
+
+// Visualize the trajectory of zmp and com based on base trajectory.
+// The method verified.
+void DoMain5() {
+  std::vector<double> kTimes;
+  std::vector<Eigen::MatrixXd> knots;
+
+  int precision = 40;
+  for (int i = 0; i<precision; i++) {
+    kTimes.push_back(i * 1);
+    double theta = M_PI*2 / precision * i;
+    knots.push_back(Eigen::Vector2d(5*std::sin(theta), 5*std::cos(theta)-5));
+  }
+  for (int i = 0; i<precision; i++) {
+    kTimes.push_back((i+precision) * 1);
+    double theta = M_PI*2 / precision * i;
+    knots.push_back(Eigen::Vector2d(5*std::sin(theta), -5*std::cos(theta)+5));
+  }
+  kTimes.push_back(2*precision*1);
+  knots.push_back(Eigen::Vector2d(0,0));
+
+  trajectories::PiecewisePolynomial<double> trajectory =
+      trajectories::PiecewisePolynomial<double>::Pchip(kTimes, knots);
+
+  const double z_cm = 0.593561;
+  Eigen::Vector4d x0(0, 0, 0, 0);
+  systems::controllers::ZMPPlanner zmp_planner;
+  zmp_planner.Plan(trajectory, x0, z_cm, 9.81, Eigen::Matrix2d::Identity(), 0.5 * Eigen::Matrix2d::Identity());
+  double sample_dt = 0.01;
+  systems::controllers::ZMPTestTraj result =
+      systems::controllers::SimulateZMPPolicy(zmp_planner, x0, sample_dt, 0.02);
+//      systems::controllers::SimulateZMPPolicy(zmp_planner, x0, sample_dt, 0.1);
+
+  lcm::DrakeLcm lcm;
+
+  std::vector<std::string> names;
+  std::vector<Eigen::Isometry3d> poses;
+  const int N = result.time.size();
+  for (int t = 0; t < N; t=t+10) {
+    names.push_back("CoM" + std::to_string(int(t)));
+    Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
+    pose.translation() = Eigen::Vector3d(result.nominal_com(0, t), result.nominal_com(1, t), z_cm);
+    poses.push_back(pose);
+  }
+  for (int t = 0; t < N; t=t+10) {
     names.push_back("ZMP" + std::to_string(int(t)));
     Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
     pose.translation() = Eigen::Vector3d(result.desired_zmp(0, t), result.desired_zmp(1, t), 0);
@@ -308,6 +389,6 @@ int main(int argc, char* argv[]) {
       "A simple dynamic simulation for the Allegro hand moving under constant"
       " torques.");
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  drake::examples::eve::DoMain4();
+  drake::examples::eve::DoMain5();
   return 0;
 }

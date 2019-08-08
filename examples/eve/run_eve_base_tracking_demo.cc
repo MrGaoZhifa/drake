@@ -33,6 +33,9 @@
 #include "drake/examples/eve/eve_common.h"
 #include "drake/lcmt_viewer_draw.hpp"
 #include "drake/systems/primitives/trajectory_source.h"
+#include "drake/lcm/drake_lcm.h"
+#include "drake/lcmt_viewer_draw.hpp"
+#include "drake/common/proto/call_python.h"
 
 namespace drake {
 namespace examples {
@@ -40,6 +43,7 @@ namespace eve {
 using drake::multibody::BodyIndex;
 using drake::multibody::ModelInstanceIndex;
 using drake::multibody::MultibodyPlant;
+using common::CallPython;
 
 DEFINE_double(constant_pos, 0.0,
               "the constant load on each joint, Unit [Nm]."
@@ -84,6 +88,11 @@ DEFINE_double(K1, 5, "The feedback for error of x and y.");
 DEFINE_double(K2, 10, "The feedback for rotational velocity.");
 DEFINE_double(K3, 10, "The feedback for rotational velocity");
 
+std::vector<double> real_x;
+std::vector<double> real_y;
+std::vector<double> des_x;
+std::vector<double> des_y;
+
 class VelocitySource : public systems::LeafSystem<double> {
  public:
   VelocitySource(MultibodyPlant<double>& plant,
@@ -118,8 +127,14 @@ class VelocitySource : public systems::LeafSystem<double> {
     std::vector<std::string> names;
     std::vector<Eigen::Isometry3d> poses;
     names.push_back("base_state");
+////////////////////////////////////////
+    real_x.push_back(state_value[4]);
+    real_y.push_back(state_value[5]);
+    des_x.push_back(desired_traj_value[0]);
+    des_y.push_back(desired_traj_value[1]);
+    //////////////////////////////////////
 
-    Eigen::Isometry3d pose = Eigen::Translation3d(Eigen::Vector3d(state_value[4], state_value[5], state_value[6])) * 
+    Eigen::Isometry3d pose = Eigen::Translation3d(Eigen::Vector3d(state_value[4], state_value[5], state_value[6])) *
                                       Eigen::AngleAxisd(rpy_base.yaw_angle(), Eigen::Vector3d::UnitZ());    
     poses.push_back(pose);
 
@@ -351,16 +366,16 @@ void DoMain() {
   // knots[1] = Eigen::Vector2d(10,0);
   // knots[2] = Eigen::Vector2d(20,0);
 
-  // Design straight line.
-  const std::vector<double> kTimes{0.0, 1.0, 2.0, 3.0, 4.0};
-  std::vector<Eigen::MatrixXd> knots(kTimes.size());
-  knots[0] = Eigen::Vector2d(0,0);
-  knots[1] = Eigen::Vector2d(0.5,0);
-  knots[2] = Eigen::Vector2d(3,0);
-  knots[3] = Eigen::Vector2d(5.5,0);
-  knots[4] = Eigen::Vector2d(6,0);
+//  // Design straight line.
+//  const std::vector<double> kTimes{0.0, 1.0, 2.0, 3.0, 4.0};
+//  std::vector<Eigen::MatrixXd> knots(kTimes.size());
+//  knots[0] = Eigen::Vector2d(0,0);
+//  knots[1] = Eigen::Vector2d(0.5,0);
+//  knots[2] = Eigen::Vector2d(3,0);
+//  knots[3] = Eigen::Vector2d(5.5,0);
+//  knots[4] = Eigen::Vector2d(6,0);
 
-  // Design a curvy trajectory to follow.
+//  // Design a curvy trajectory to follow.
 //  std::vector<double> kTimes{0.0, 1.0, 5.0, 9.0, 10.0};
 //  for (size_t i = 0; i < kTimes.size(); ++i) {
 //    kTimes[i] = kTimes[i]*0.5;
@@ -368,9 +383,22 @@ void DoMain() {
 //  std::vector<Eigen::MatrixXd> knots(kTimes.size());
 //  knots[0] = Eigen::Vector2d(0,   0);
 //  knots[1] = Eigen::Vector2d(0.5, 0);
-//  knots[2] = Eigen::Vector2d(3,   0.5);
+//  knots[2] = Eigen::Vector2d(3,   0.8);
 //  knots[3] = Eigen::Vector2d(5.5, 0);
 //  knots[4] = Eigen::Vector2d(6,   0);
+
+  std::vector<double> kTimes{0.0, 2.0, 4.0, 6.0, 8.0, 10, 12};
+  for (size_t i = 0; i < kTimes.size(); ++i) {
+    kTimes[i] = kTimes[i] * 0.7;
+  }
+  std::vector<Eigen::MatrixXd> knots(kTimes.size());
+  knots[0] = Eigen::Vector2d(0, 0);
+  knots[1] = Eigen::Vector2d(1, 0);
+  knots[2] = Eigen::Vector2d(3, 0.5);
+  knots[3] = Eigen::Vector2d(5, 0);
+  knots[4] = Eigen::Vector2d(7, -0.5);
+  knots[5] = Eigen::Vector2d(9, 0);
+  knots[6] = Eigen::Vector2d(10, 0);
 
   trajectories::PiecewisePolynomial<double> trajectory =
       trajectories::PiecewisePolynomial<double>::Pchip(kTimes, knots);
@@ -382,7 +410,18 @@ void DoMain() {
   builder.Connect(traj_src->get_output_port(),
                   vs->get_input_port(1));
 
-
+  //////////////////////////////////////////////////////////////////
+  std::vector<std::string> names;
+  std::vector<Eigen::Isometry3d> poses;
+  for (double t = 0.0; t < FLAGS_simulation_time; t += 0.1) {
+    names.push_back("X" + std::to_string(int(t * 100)));
+    Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
+    pose.translation() = trajectory.value(t);
+    pose.translation()[2] = 0.130256;
+    poses.push_back(pose);
+  }
+  PublishFramesToLcm("DRAKE_DRAW_FRAMES_STATIC", poses, names, &lcm);
+  /////////////////////////////////////////////////////////////////
 
   // Connect plant with scene_graph to get collision information.
   DRAKE_DEMAND(!!plant->get_source_id());
@@ -421,6 +460,26 @@ void DoMain() {
   simulator.set_target_realtime_rate(FLAGS_target_realtime_rate);
   simulator.Initialize();
   simulator.AdvanceTo(FLAGS_simulation_time);
+
+  const int N = real_x.size();
+  Eigen::VectorXd times = Eigen::VectorXd::Zero(N);
+  Eigen::VectorXd eigen_x = Eigen::VectorXd::Zero(N);
+  Eigen::VectorXd eigen_y = Eigen::VectorXd::Zero(N);
+  Eigen::VectorXd eigen_x_des = Eigen::VectorXd::Zero(N);
+  Eigen::VectorXd eigen_y_des = Eigen::VectorXd::Zero(N);
+  for (int i = 0;  i<N; i=i+1) {
+    times(i) = 0.01*i;
+    eigen_x(i) = real_x[i];
+    eigen_y(i) = real_y[i];
+    eigen_x_des(i) = des_x[i];
+    eigen_y_des(i) = des_y[i];
+  }
+  CallPython("figure", 1);
+  CallPython("clf");
+  CallPython("plot", eigen_x, eigen_y);
+  CallPython("plot", eigen_x_des, eigen_y_des);
+  CallPython("plt.xlabel", "x");
+  CallPython("plt.ylabel", "y");
 }
 
 }  // namespace eve
