@@ -97,115 +97,6 @@ DEFINE_double(circle_radius, 1.0, "Used on feedback of base velocity to track ba
 DEFINE_double(inteval, 0.4, "Used on feedback of base velocity to track base acceleration.");
 DEFINE_double(precision, 16, "Used on feedback of base velocity to track base acceleration.");
 
-//class WheelControllerLogic : public systems::LeafSystem<double> {
-// public:
-//  WheelControllerLogic(MultibodyPlant<double>& plant,
-//                       ModelInstanceIndex plant_instance)
-//      : plant_(plant), plant_instance_(plant_instance) {
-//    this->DeclareVectorInputPort("input1", systems::BasicVector<double>(1));
-//    this->DeclareVectorOutputPort(
-//        "output1", systems::BasicVector<double>(plant->num_actuators()),
-//        &WheelControllerLogic::remap_output);
-//  }
-//
-//  void remap_output(const systems::Context<double>& context,
-//                    systems::BasicVector<double>* output_vector) const {
-//    auto output_value = output_vector->get_mutable_value();
-//    auto input_value = this->EvalVectorInput(context, 0)->get_value();
-//    (void)input_value;
-//    output_value.setZero();
-//    output_value[0] = 2;
-//    output_value[1] = 2;
-//    drake::log()->info(input_value.transpose());
-//    drake::log()->info(output_value.transpose());
-//    drake::log()->info("\n");
-//
-//    //    plant_.SetVelocitiesInArray(plant_instance_, input_value,
-//    //    &output_value);
-//  }
-//
-// private:
-//  MultibodyPlant<double>& plant_;
-//  ModelInstanceIndex plant_instance_;
-//};
-//
-//class WheelStateSelector : public systems::LeafSystem<double> {
-// public:
-//  WheelStateSelector(MultibodyPlant<double>& plant,
-//                     ModelInstanceIndex plant_instance)
-//      : plant_(plant), plant_instance_(plant_instance) {
-//    this->DeclareVectorInputPort(
-//        "input1", systems::BasicVector<double>(plant->num_multibody_states()));
-//    this->DeclareVectorOutputPort("output1", systems::BasicVector<double>(2),
-//                                  &WheelStateSelector::remap_output);
-//  }
-//
-//  void remap_output(const systems::Context<double>& context,
-//                    systems::BasicVector<double>* output_vector) const {
-//    auto output_value = output_vector->get_mutable_value();
-//    auto input_value = this->EvalVectorInput(context, 0)->get_value();
-//    //    (void) input_value;
-//    //    drake::log()->info(output_value.transpose());
-//    //    output_value.setZero();
-//    output_value[0] = input_value[5];
-//    output_value[1] = input_value[34];
-//    //    plant_.SetVelocitiesInArray(plant_instance_, input_value,
-//    //    &output_value);
-//  }
-//
-// private:
-//  MultibodyPlant<double>& plant_;
-//  ModelInstanceIndex plant_instance_;
-//};
-//
-//class WheelController : public systems::Diagram<double> {
-// public:
-//  WheelController(MultibodyPlant<double>& plant,
-//                  ModelInstanceIndex plant_instance)
-//      : plant_(plant), plant_instance_(plant_instance) {
-//    systems::DiagramBuilder<double> builder;
-//
-//    // Add wheel state selector.
-//    const auto* const wss =
-//        builder.AddSystem<WheelStateSelector>(plant, plant_instance);
-//
-//    // Add PID controller.
-//    const Eigen::VectorXd Kp = Eigen::VectorXd::Ones(1) * 8.0;
-//    const Eigen::VectorXd Ki = Eigen::VectorXd::Ones(1) * 0.0;
-//    const Eigen::VectorXd Kd = Eigen::VectorXd::Ones(1) * 0.0;
-//    const auto* const wc =
-//        builder.AddSystem<systems::controllers::PidController<double>>(Kp, Ki,
-//                                                                       Kd);
-//    // Set PID desired states.
-//    auto desired_base_source =
-//        builder.AddSystem<systems::ConstantVectorSource<double>>(
-//            Eigen::VectorXd::Zero(2));
-//    builder.Connect(desired_base_source->get_output_port(),
-//                    wc->get_input_port_desired_state());
-//
-//    // Add wheel control logic.
-//    const auto* const wcl =
-//        builder.AddSystem<WheelControllerLogic>(plant, plant_instance);
-//
-//    // Expose Input and Output port.
-//    builder.ExportInput(wss->get_input_port(0), "wheel_state");
-//    builder.ExportOutput(wcl->get_output_port(0), "wheel_control");
-//
-//    // Connect internal ports
-//    builder.Connect(wss->get_output_port(0),
-//                    wc->get_input_port_estimated_state());
-//    builder.Connect(wc->get_output_port_control(), wcl->get_input_port(0));
-//
-//    builder.BuildInto(this);
-//  }
-//
-// private:
-//  MultibodyPlant<double>& plant_;
-//  ModelInstanceIndex plant_instance_;
-//};
-
-
-
 class JInverse : public systems::LeafSystem<double> {
  public:
   systems::InputPortIndex com_acceleration_port_index;
@@ -247,7 +138,9 @@ class JInverse : public systems::LeafSystem<double> {
     // The base acceleration does not care about the direction of the base, it only care about the acceleration of x y direction in world.
     // We could get rid of the base x y acceleration and then use the fixed base fake model to compute the jacobian.
 
-
+    const systems::DiagramContext<double>* diagram_context = context.get_parent_base();
+    plant_context_ = diagram_context->GetMutableSubsystemContext();
+//    plant_context_ = context.GetMutableSubsystemContext();
     // Compute CoM position and velocity.
     Eigen::Vector3d p_WBcm, v_WBcm;
     plant_.CalcCenterOfMassPosition(*plant_context_, &p_WBcm);

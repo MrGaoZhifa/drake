@@ -52,6 +52,9 @@ class ContextBase : public internal::ContextMessageInterface {
 
   ~ContextBase() override;
 
+  // Returns the parent Context or `nullptr` if this is the root Context.
+  const ContextBase* get_parent_base() const { return parent_; }
+
   /** (Debugging) Disables caching recursively for this context
   and all its subcontexts. Disabling forces every `Eval()` method to perform a
   full calculation rather than returning the cached one. Results should be
@@ -590,8 +593,7 @@ class ContextBase : public internal::ContextMessageInterface {
  private:
   friend class detail::SystemBaseContextBaseAttorney;
 
-  // Returns the parent Context or `nullptr` if this is the root Context.
-  const ContextBase* get_parent_base() const { return parent_; }
+
 
   // Records the name of the system whose context this is.
   void set_system_name(const std::string& name) { system_name_ = name; }
