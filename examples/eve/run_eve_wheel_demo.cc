@@ -87,10 +87,10 @@ DEFINE_bool(is_inclined_plane_half_space, true,
             "Is inclined plane a half-space (true) or box (false).");
 DEFINE_double(init_height, 0.13, "Initial height for base.");
 
-DEFINE_double(K1, 5, "The feedback control for base error of x and y.");
+DEFINE_double(K1, 30, "The feedback control for base error of x and y.");
 DEFINE_double(K2, 30, "The feedback control for base rotational velocity.");
 DEFINE_double(K3, 30, "The feedback control for base rotational velocity");
-DEFINE_double(com_kp, 10, "Used on feedback of com position to track com acceleration.");
+DEFINE_double(com_kp, 30, "Used on feedback of com position to track com acceleration.");
 DEFINE_double(com_kd, 10, "Used on feedback of com velocity to track com acceleration.");
 DEFINE_double(base_kp, 2.0, "Used on feedback of base position to track base acceleration.");
 DEFINE_double(base_kd, 0.1, "Used on feedback of base velocity to track base acceleration.");
