@@ -40,6 +40,7 @@
 #include "drake/solvers/solve.h"
 #include "drake/common/proto/call_python.h"
 
+#include <memory>
 #include <algorithm>
 
 namespace drake {
@@ -138,13 +139,13 @@ class JInverse : public systems::LeafSystem<double> {
     // The base acceleration does not care about the direction of the base, it only care about the acceleration of x y direction in world.
     // We could get rid of the base x y acceleration and then use the fixed base fake model to compute the jacobian.
 
-    const systems::DiagramContext<double>* diagram_context = context.get_parent_base();
-    plant_context_ = diagram_context->GetMutableSubsystemContext();
-//    plant_context_ = context.GetMutableSubsystemContext();
+    const systems::DiagramContext<double>* diagram_context = dynamic_cast<const systems::DiagramContext<double>*>(context.get_parent_base());
+    const systems::Context<double>& plant_context = diagram_context->GetSubsystemContext(systems::SubsystemIndex{1});
+
     // Compute CoM position and velocity.
     Eigen::Vector3d p_WBcm, v_WBcm;
-    plant_.CalcCenterOfMassPosition(*plant_context_, &p_WBcm);
-    plant_.CalcCenterOfMassVelocity(*plant_context_, &v_WBcm);
+    plant_.CalcCenterOfMassPosition(plant_context, &p_WBcm);
+    plant_.CalcCenterOfMassVelocity(plant_context, &v_WBcm);
     Eigen::Vector3d a_cm = com_acceleration_value
         + FLAGS_com_kp * (com_trajectory_value.head(3) - p_WBcm)
         + FLAGS_com_kd * (com_trajectory_value.segment<3>(3) - v_WBcm);
