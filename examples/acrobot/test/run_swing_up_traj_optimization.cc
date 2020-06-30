@@ -13,6 +13,7 @@
 #include "drake/examples/acrobot/acrobot_plant.h"
 #include "drake/geometry/geometry_visualization.h"
 #include "drake/solvers/snopt_solver.h"
+#include "drake/solvers/ipopt_solver.h"
 #include "drake/systems/analysis/simulator.h"
 #include "drake/systems/controllers/finite_horizon_linear_quadratic_regulator.h"
 #include "drake/systems/framework/diagram.h"
@@ -34,11 +35,6 @@ DEFINE_double(realtime_factor, 1.0,
               "Simulator::set_target_realtime_rate() for details.");
 
 int do_main() {
-  if (!solvers::SnoptSolver::is_available()) {
-    std::cout << "This test was flaky with IPOPT, so currently requires SNOPT."
-              << std::endl;
-    return 0;
-  }
 
   AcrobotPlant<double> acrobot;
   auto context = acrobot.CreateDefaultContext();
@@ -70,11 +66,12 @@ int do_main() {
       {0, timespan_init}, {x0, xG});
   dircol.SetInitialTrajectory(PiecewisePolynomialType(), traj_init_x);
 
-  solvers::SnoptSolver solver;
+  solvers::IpoptSolver solver;
   const auto result = solver.Solve(dircol);
   if (!result.is_success()) {
     std::cerr << "No solution found.\n";
-    return 1;
+    std::cout << result.get_solver_details<solvers::IpoptSolver>().status;
+//    return 1;
   }
 
   // Stabilize the trajectory with LQR and simulate.
